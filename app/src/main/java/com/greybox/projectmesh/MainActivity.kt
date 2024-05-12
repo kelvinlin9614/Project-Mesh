@@ -2,6 +2,7 @@ package com.greybox.projectmesh
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.StrictMode
@@ -10,6 +11,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,7 +37,6 @@ import androidx.core.content.ContextCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
-import com.google.zxing.integration.android.IntentIntegrator
 import com.greybox.projectmesh.networking.HttpServer
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
@@ -46,9 +47,7 @@ import com.ustadmobile.meshrabiya.vnet.LocalNodeState
 import com.ustadmobile.meshrabiya.vnet.MeshrabiyaConnectLink
 import com.ustadmobile.meshrabiya.vnet.wifi.ConnectBand
 import com.ustadmobile.meshrabiya.vnet.wifi.HotspotType
-import com.ustadmobile.meshrabiya.vnet.wifi.state.MeshrabiyaWifiState
 import com.yveskalume.compose.qrpainter.rememberQrBitmapPainter
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
@@ -58,19 +57,28 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
-import java.io.PrintWriter
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.ServerSocket
+import java.net.Socket
 import java.nio.charset.Charset
 import java.time.Duration
-import java.util.Scanner
 
 
 class MainActivity : ComponentActivity() {
 
     private val webServer = HttpServer()
+    private val okHttpClient = OkHttpClient()
+
+    private var selectedFileUri by mutableStateOf<Uri?>(null)
+    private val selectFile =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            selectedFileUri = uri
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -162,7 +170,7 @@ class MainActivity : ComponentActivity() {
             }
             val coroutineScope = rememberCoroutineScope()
             val qrScannerLauncher = rememberLauncherForActivityResult(contract = ScanContract()) {
-                result ->
+                    result ->
                 val link = result.contents
                 if (link != null)
                 {
@@ -170,9 +178,9 @@ class MainActivity : ComponentActivity() {
                     if(connectConfig != null) {
                         val job = coroutineScope.launch {
                             //try {
-                                thisNode.connectAsStation(connectConfig)
+                            thisNode.connectAsStation(connectConfig)
                             //} catch (e: Exception) {
-                                //Log(Log.ERROR,"Failed to connect ",e)
+                            //Log(Log.ERROR,"Failed to connect ",e)
                             //}
                         }
                     }
@@ -190,6 +198,7 @@ class MainActivity : ComponentActivity() {
 
             }) //thisNode.meshrabiyaWifiManager.connectToHotspot()
 
+            //this crashes
             Button(content = {Text("HTTP Test")}, onClick = {
                 val payload = "test payload"
 
@@ -233,6 +242,9 @@ class MainActivity : ComponentActivity() {
             Button(content = {Text("Start hotspot (Local only)")}, onClick = {hotspot(HotspotType.LOCALONLY_HOTSPOT)})
 
 
+
+
+
             Text(text = "Other nodes:")
             //nodes.originatorMessages.entries
             //if (nodes.originatorMessages.isEmpty())
@@ -241,14 +253,38 @@ class MainActivity : ComponentActivity() {
             //}
             //else
 
-                nodes.originatorMessages.entries.forEach {
-                    Text(  it.value.lastHopAddr.addressToDotNotation() + it.value.originatorMessage + it.value)
+            nodes.originatorMessages.entries.forEach {
+                Text(  it.value.lastHopAddr.addressToDotNotation() + it.value.originatorMessage + it.value)
 
             }
-
-
-
             var chatLog by remember { mutableStateOf("") }
+
+            //new button for selecting a file
+            Button(content = { Text("Select File") }, onClick = {
+                selectFile.launch("image/*") //adjust the MIME type as needed
+            })
+
+            //new button for sending the file
+            Button(
+                content = { Text("Send File") },
+                onClick = {
+                    selectedFileUri?.let { fileUri ->
+                        val lastHopAddr = nodes.originatorMessages.values.firstOrNull()?.lastHopAddr?.addressToDotNotation()
+                        if (lastHopAddr != null) {
+                            sendFile(thisNode, fileUri, lastHopAddr)
+                            Log.d("DEBUG", "Sending file $fileUri to $lastHopAddr")
+                            chatLog += "You: $fileUri\n"
+                        }
+
+                        else {
+                            Log.e("DEBUG", "Could not find last hop address")
+                        }
+                    }
+                },
+                enabled = selectedFileUri != null
+            )
+
+
 
             Row {
                 var chatMessage by remember { mutableStateOf("") }
@@ -277,9 +313,31 @@ class MainActivity : ComponentActivity() {
             }
 
             Text(text = chatLog)
-
             // TCP Networking
             // Add to chat when recieve data
+//            LaunchedEffect(Unit) {
+//                Log.d("DEBUG","Launchedeffect?")
+//                //Runs once (like useEffect null in React)
+//                // Thread that listens for TCP data on port 1337, prints to chat
+//                Thread(Runnable {
+//                    Log.d("DEBUG","TCP thread started")
+//                    val serverSocket = ServerSocket(1337)
+//
+//                    while (true) {
+//                        val socket = serverSocket.accept()
+//                        Log.d("DEBUG","Incoming chat...")
+//
+//                        val msg = socket.getInputStream().readBytes().toString(
+//                            Charset.defaultCharset())
+//                        Log.d("DEBUG", "Message info: ${msg}")
+//                        chatLog += msg + '\n'
+//
+//                        socket.close()
+//                        Log.d("DEBUG","Closed connection")
+//                    }
+//                }).start()
+//            }
+
             LaunchedEffect(Unit) {
                 Log.d("DEBUG","Launchedeffect?")
                 //Runs once (like useEffect null in React)
@@ -290,12 +348,32 @@ class MainActivity : ComponentActivity() {
 
                     while (true) {
                         val socket = serverSocket.accept()
-                        Log.d("DEBUG","Incoming chat...")
+                        Log.d("DEBUG","Incoming file...")
 
-                        val msg = socket.getInputStream().readBytes().toString(
-                            Charset.defaultCharset())
-                        Log.d("DEBUG", "Message info: ${msg}")
-                        chatLog += msg + '\n'
+                        val inputStream = socket.getInputStream()
+
+                        val folderPath = "/downloads/mesh-app"
+                        val folder = File(folderPath)
+                        if (!folder.exists()) {
+                            folder.mkdirs() // Create folders if they don't exist
+                        }
+
+                        val filePath = "$folderPath/filename.ext"
+                        val file = File(filePath)
+                        val outputStream = FileOutputStream(file)
+
+                        val buffer = ByteArray(1024)
+                        var bytesRead: Int
+                        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                            outputStream.write(buffer, 0, bytesRead)
+                        }
+
+                        outputStream.close()
+
+                        // Update UI to display received file
+                        // Note: This code will need to be updated to work correctly in Compose
+                        // For now, just log the received file path
+                        Log.d("DEBUG", "Received file saved at: $filePath")
 
                         socket.close()
                         Log.d("DEBUG","Closed connection")
@@ -303,11 +381,49 @@ class MainActivity : ComponentActivity() {
                 }).start()
             }
 
+
         }
     }
 
     //lateinit var thisNode: AndroidVirtualNode
 
+    //testing***********************************
 
-    
+
+
+    private fun sendFile(thisNode: AndroidVirtualNode, fileUri: Uri, lastHopAddr: String) {
+        val inputStream = contentResolver.openInputStream(fileUri)
+        val fileName = contentResolver.getType(fileUri)
+
+        val socket = Socket()
+        try {
+            val port = 1337
+
+            socket.connect(InetSocketAddress(lastHopAddr, port))
+            val outputStream = socket.getOutputStream()
+
+            //send filename lol
+            fileName?.let { outputStream.write(it.toByteArray()) }
+
+            //send file
+            val buffer = ByteArray(1024)
+            var bytesRead: Int
+            while (inputStream?.read(buffer).also { bytesRead = it!! } != -1) {
+                outputStream.write(buffer, 0, bytesRead)
+            }
+
+
+            Log.d("MainActivity", "File sent successfully")
+        }
+
+        catch (e: IOException) {
+            Log.e("MainActivity", "Failed to send file", e)
+        }
+
+        finally {
+            socket.close()
+            inputStream?.close()
+        }
+    }
+
 }
