@@ -1,13 +1,8 @@
 package com.greybox.projectmesh.views
 
-import android.annotation.SuppressLint
-import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
-import android.os.Build
-import android.os.PowerManager
-import android.provider.Settings
+import android.content.SharedPreferences
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -61,15 +56,14 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.zxing.BarcodeFormat
 import com.greybox.projectmesh.NEARBY_WIFI_PERMISSION_NAME
 import com.greybox.projectmesh.R
 import com.greybox.projectmesh.ViewModelFactory
 import com.greybox.projectmesh.buttonStyle.WhiteButton
 import com.greybox.projectmesh.hasNearbyWifiDevicesOrLocationPermission
-import com.greybox.projectmesh.hasStaApConcurrency
 import com.greybox.projectmesh.model.HomeScreenModel
+import com.greybox.projectmesh.util.getLatestConcurrencySupportAnswer
 import com.greybox.projectmesh.viewModel.HomeScreenViewModel
 import com.journeyapps.barcodescanner.BarcodeEncoder
 import com.journeyapps.barcodescanner.ScanContract
@@ -107,6 +101,7 @@ fun HomeScreen(viewModel: HomeScreenViewModel = viewModel
             viewModel.onSetIncomingConnectionsEnabled(true)
         }
     } }
+
     // Launch the home screen
     StartHomeScreen(
         uiState = uiState,
@@ -210,7 +205,7 @@ fun StartHomeScreen(
                         // If not connected to a WiFi, enable the button
                         // Else, check if the device supports WiFi STA/AP Concurrency
                         // If it does, enable the button. Otherwise, disable it
-                        enabled = if(stationState == null || stationState.status == WifiStationState.Status.INACTIVE) true else context.hasStaApConcurrency()
+                        enabled = if(stationState == null || stationState.status == WifiStationState.Status.INACTIVE) true else getLatestConcurrencySupportAnswer()
                     )
                 }
             }
@@ -278,7 +273,7 @@ fun StartHomeScreen(
                                 // If the hotspot isn't started, enable the button
                                 // Else, check if the device supports WiFi STA/AP Concurrency
                                 // If it does, enable the button. Otherwise, disable it
-                                enabled = if(!uiState.hotspotStatus) true else context.hasStaApConcurrency()
+                                enabled = if(!uiState.hotspotStatus) true else getLatestConcurrencySupportAnswer()
                             )
                         }
                         Spacer(modifier = Modifier.height(12.dp))
@@ -301,7 +296,7 @@ fun StartHomeScreen(
                             // If the hotspot isn't started, enable the button
                             // Else, check if the device supports WiFi STA/AP Concurrency
                             // If it does, enable the button. Otherwise, disable it
-                            enabled = if (!uiState.hotspotStatus) true else context.hasStaApConcurrency()
+                            enabled = if (!uiState.hotspotStatus) true else getLatestConcurrencySupportAnswer()
                         )
                     }
                 }
@@ -379,13 +374,17 @@ fun LongPressCopyableText(context: Context,
         style = TextStyle(
             fontSize = textSize.sp,
             color = MaterialTheme.colorScheme.onBackground),
-        modifier = Modifier.pointerInput(textCopyable) {
-            detectTapGestures(
-                onLongPress = {
-                    clipboardManager.setText(AnnotatedString(textCopyable))
-                    Toast.makeText(context, "Text copied to clipboard!", Toast.LENGTH_SHORT).show()
-                })
-        }.padding(padding.dp)
+        modifier = Modifier
+            .pointerInput(textCopyable) {
+                detectTapGestures(
+                    onLongPress = {
+                        clipboardManager.setText(AnnotatedString(textCopyable))
+                        Toast
+                            .makeText(context, "Text copied to clipboard!", Toast.LENGTH_SHORT)
+                            .show()
+                    })
+            }
+            .padding(padding.dp)
     )
 }
 
@@ -395,7 +394,7 @@ fun QRCodeView(qrcodeUri: String, barcodeEncoder: BarcodeEncoder, ssid: String?,
                mac: String?, port: String?) {
     val qrCodeBitMap = remember(qrcodeUri) {
         barcodeEncoder.encodeBitmap(
-            qrcodeUri, BarcodeFormat.QR_CODE, 400, 400
+            qrcodeUri, BarcodeFormat.QR_CODE, 500, 500
         ).asImageBitmap()
     }
     Row {

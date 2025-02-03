@@ -53,5 +53,9 @@
 
     <string name="elapsed_time">Elapsed time</string>
 
+    <string name="concurrency"> STA/AP Concurrency</string>
+    <string name="manual_test">Manual Test</string>
+    <string name="reset">Reset</string>
+
 
 </resources>

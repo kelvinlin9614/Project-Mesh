@@ -1,7 +1,9 @@
 package com.greybox.projectmesh.views
 
 import android.content.Intent
+import android.content.SharedPreferences
 import android.net.Uri
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -54,6 +56,8 @@ import com.greybox.projectmesh.buttonStyle.GradientButton
 import com.greybox.projectmesh.ui.theme.AppTheme
 import com.greybox.projectmesh.viewModel.SettingsScreenViewModel
 import org.kodein.di.compose.localDI
+import com.greybox.projectmesh.util.checkStaApConcurrency
+import org.kodein.di.instance
 
 
 @Composable
@@ -72,6 +76,7 @@ fun SettingsScreen(
     onAutoFinishChange: (Boolean) -> Unit,
     onSaveToFolderChange: (String) -> Unit
 ) {
+    val di = localDI()
     val context = LocalContext.current
     val currTheme = viewModel.theme.collectAsState()
     val currLang = viewModel.lang.collectAsState()
@@ -80,6 +85,8 @@ fun SettingsScreen(
     val currSaveToFolder = viewModel.saveToFolder.collectAsState()
 
     var showDialog by remember { mutableStateOf(false) }
+
+    val settingPref: SharedPreferences by di.instance(tag="settings")
 
     Column(modifier = Modifier
         .fillMaxSize()
@@ -259,6 +266,45 @@ fun SettingsScreen(
                 GradientButton(text = folderNameToShow, onClick = {
                     directoryLauncher.launch(null)
                 })
+            }
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R){
+                Spacer(modifier = Modifier.height(20.dp))
+                Text(stringResource(id = R.string.concurrency), style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold))
+                HorizontalDivider(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(0.dp, 10.dp),
+                    thickness = 2.dp,
+                    color = Color.Red
+                )
+                Row(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(0.dp, 16.dp))
+                {
+                    Text(
+                        stringResource(id = R.string.manual_test), style = TextStyle(fontSize = 18.sp), modifier = Modifier
+                            .align(Alignment.CenterVertically))
+                    Spacer(modifier = Modifier.weight(1f))
+                    GradientButton(
+                        text = stringResource(id = R.string.reset),
+                        onClick = {
+                            checkStaApConcurrency(context){ supported ->
+                                if (supported == null) {
+                                    settingPref.edit()
+                                        .putBoolean("StaApConcurrencySupported", false)
+                                        .putBoolean("StaApConcurrencyKnown", false)
+                                        .apply()
+                                }
+                                else{
+                                    settingPref.edit()
+                                        .putBoolean("StaApConcurrencySupported", supported)
+                                        .putBoolean("StaApConcurrencyKnown", true)
+                                        .apply()
+                                }
+                            }
+                        }
+                    )
+                }
             }
         }
     }

@@ -56,6 +56,7 @@ import org.kodein.di.instance
 import java.io.File
 import java.util.Locale
 import java.net.InetAddress
+import com.greybox.projectmesh.util.checkStaApConcurrency
 
 class MainActivity : ComponentActivity(), DIAware {
     override val di by closestDI()
@@ -144,6 +145,25 @@ class MainActivity : ComponentActivity(), DIAware {
         CrashHandler.init(applicationContext,CrashScreenActivity::class.java)
         if (!isBatteryOptimizationDisabled(this)) {
             promptDisableBatteryOptimization(this)
+        }
+
+        val concurrencyKnown = settingPref.getBoolean("StaApConcurrencyKnown", false)
+
+        if(!concurrencyKnown){
+            checkStaApConcurrency(this){ supported ->
+                if (supported == null) {
+                    settingPref.edit()
+                        .putBoolean("StaApConcurrencySupported", false)
+                        .putBoolean("StaApConcurrencyKnown", false)
+                        .apply()
+                }
+                else{
+                    settingPref.edit()
+                        .putBoolean("StaApConcurrencySupported", supported)
+                        .putBoolean("StaApConcurrencyKnown", true)
+                        .apply()
+                }
+            }
         }
     }
 

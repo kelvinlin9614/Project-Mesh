@@ -41,4 +41,9 @@
     <string name="cancel">取消</string>
 
     <string name="elapsed_time">耗时</string>
+
+    <string name="concurrency">STA/AP 并发</string>
+    <string name="manual_test">手动测试</string>
+    <string name="reset">重置</string>
+
 </resources>

@@ -41,4 +41,9 @@
     <string name="cancel">Cancelar</string>
 
     <string name="elapsed_time">Tiempo transcurrido</string>
+
+    <string name="concurrency">Concurrencia STA/AP</string>
+    <string name="manual_test">Prueba Manual</string>
+    <string name="reset">Restablecer</string>
+
 </resources>
