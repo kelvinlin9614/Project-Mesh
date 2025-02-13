@@ -17,6 +17,7 @@
     https://developer.android.com/guide/topics/connectivity/localonlyhotspot
     -->
     <!-- required for wifi performance lock -->
+    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- For QR code scanning -->
     <uses-permission android:name="android.permission.CAMERA" />
@@ -29,8 +30,8 @@
  If your app targets Android 13 (API level 33)
           or higher, you must declare the NEARBY_WIFI_DEVICES permission.
     -->
-    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
-    <!-- android:usesPermissionFlags="neverForLocation" if API level 33 -->
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation" />
     <uses-permission
         android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission
@@ -39,6 +40,8 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
 
 

@@ -8,7 +8,6 @@ import android.util.Log
 import com.greybox.projectmesh.GlobalApp
 import com.greybox.projectmesh.db.MeshDatabase
 import com.greybox.projectmesh.db.entities.Message
-import com.greybox.projectmesh.GlobalApp.Companion.TAG_VIRTUAL_ADDRESS
 import com.greybox.projectmesh.extension.updateItem
 import com.ustadmobile.meshrabiya.ext.copyToWithProgressCallback
 import com.ustadmobile.meshrabiya.util.FileSerializer
@@ -41,11 +40,10 @@ import com.greybox.projectmesh.extension.getUriNameAndSize
 import org.kodein.di.DI
 import org.kodein.di.DIAware
 import org.kodein.di.instance
-import kotlinx.coroutines.runBlocking
 import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URLDecoder
+import com.greybox.projectmesh.util.NotificationHelper
 
 /*
 This File is the Server for transferring files
@@ -71,8 +69,6 @@ class AppServer(
         PENDING, IN_PROGRESS, COMPLETED, FAILED, DECLINED
     }
 
-
-
     // Restart method to stop and start the server with an optional new IP address
     fun restart() {
         stop() // Stop the server using NanoHTTPD's built-in stop method
@@ -80,7 +76,6 @@ class AppServer(
         start(SOCKET_READ_TIMEOUT, false) // Start the server using NanoHTTPD's built-in start method
         Log.d("AppServer", "Server restarted successfully on port: $localPort")
     }
-
 
     /*
     This data class contains all the information about the outgoing transfer (Sending a file)
@@ -160,6 +155,7 @@ class AppServer(
                 json.decodeFromString(IncomingTransferInfo.serializer(), it.readText())
                 // if no files match the criteria, return an empty list
             } ?: emptyList()
+            NotificationHelper.createNotificationChannel(appContext)
             /*
              updates the _incomingTransfers MutableStateFlow with the list of incoming files
              It combines the previous list with newly read files from the directory
@@ -297,6 +293,8 @@ class AppServer(
                         addAll(prev)
                     }
                 }
+                // Show notification
+                NotificationHelper.showFileReceivedNotification(appContext, filename)
                 // Return "OK", Confirming the transfer request has been handled
                 return newFixedLengthResponse("OK")
             }else {

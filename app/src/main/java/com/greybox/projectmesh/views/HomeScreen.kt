@@ -1,8 +1,11 @@
 package com.greybox.projectmesh.views
 
+import android.Manifest
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
+import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -36,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,6 +59,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.zxing.BarcodeFormat
 import com.greybox.projectmesh.NEARBY_WIFI_PERMISSION_NAME
@@ -89,10 +94,39 @@ fun HomeScreen(viewModel: HomeScreenViewModel = viewModel
     deviceName: String?
 )
 {
+    val context = LocalContext.current
     val di = localDI()
     val uiState: HomeScreenModel by viewModel.uiState.collectAsState(initial = HomeScreenModel())
     val node: VirtualNode by di.instance()
-    val context = LocalContext.current
+
+    // Request location permission using rememberLauncherForActivityResult
+    var locationPermissionGranted by remember { mutableStateOf(false) }
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        locationPermissionGranted = isGranted
+        if (!isGranted) {
+            Toast.makeText(context, "Location permission is required for Wi-Fi Direct hotspot", Toast.LENGTH_SHORT).show()
+        }
+    }
+    LaunchedEffect(Unit) {
+        // For Android Marshmallow (API 23) and above, check the permission
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            } else {
+                locationPermissionGranted = true
+            }
+        } else {
+            // For devices below API 23, no runtime permission needed
+            locationPermissionGranted = true
+        }
+    }
+
     // Request nearby wifi permission
     val requestNearbyWifiPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -106,16 +140,17 @@ fun HomeScreen(viewModel: HomeScreenViewModel = viewModel
     StartHomeScreen(
         uiState = uiState,
         node = node as AndroidVirtualNode,
-        onSetIncomingConnectionsEnabled = {enabled ->
-            if(enabled && !context.hasNearbyWifiDevicesOrLocationPermission()){
+        onSetIncomingConnectionsEnabled = { enabled ->
+            if(enabled && !context.hasNearbyWifiDevicesOrLocationPermission()) {
                 requestNearbyWifiPermissionLauncher.launch(NEARBY_WIFI_PERMISSION_NAME)
             }
-            else{
+            else {
                 viewModel.onSetIncomingConnectionsEnabled(enabled)
             }
         },
         onClickDisconnectWifiStation = viewModel::onClickDisconnectStation,
-        deviceName = deviceName
+        deviceName = deviceName,
+        context = context
     )
 }
 
@@ -127,11 +162,11 @@ fun StartHomeScreen(
     onSetIncomingConnectionsEnabled: (Boolean) -> Unit = { },
     onClickDisconnectWifiStation: () -> Unit = { },
     viewModel: HomeScreenViewModel = viewModel(),
-    deviceName: String?
+    deviceName: String?,
+    context: Context
 ){
     val di = localDI()
     val barcodeEncoder = remember { BarcodeEncoder() }
-    val context = LocalContext.current
     var userEnteredConnectUri by rememberSaveable { mutableStateOf("") }
     // connect to other device via connect uri
     fun connect(uri: String): Unit {
@@ -171,6 +206,7 @@ fun StartHomeScreen(
             Log.d("Connection", "QR Code scan doesn't return a link")
         }
     }
+
     Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
         Column {
             Spacer(modifier = Modifier.height(6.dp))
@@ -193,7 +229,7 @@ fun StartHomeScreen(
             Spacer(modifier = Modifier.height(12.dp))
             // Display the "Start Hotspot" button
             val stationState = uiState.wifiState?.wifiStationState
-            if (!uiState.wifiConnectionsEnabled) {
+            if (!uiState.wifiConnectionEnabled) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
@@ -216,7 +252,13 @@ fun StartHomeScreen(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     WhiteButton(
-                        onClick = { onSetIncomingConnectionsEnabled(false) },
+                        onClick = {
+                            stopHotspotConfirmationDialog(context) { onConfirm ->
+                                if (onConfirm) {
+                                    onSetIncomingConnectionsEnabled(false)
+                                }
+                            }
+                        },
                         modifier = Modifier.padding(4.dp),
                         text = stringResource(id = R.string.stop_hotspot),
                         enabled = true
@@ -226,7 +268,7 @@ fun StartHomeScreen(
 
             // Generating QR CODE
             val connectUri = uiState.connectUri
-            if (connectUri != null && uiState.wifiConnectionsEnabled) {
+            if (connectUri != null && uiState.wifiConnectionEnabled) {
                 Spacer(modifier = Modifier.height(16.dp))
                 QRCodeView(
                     connectUri,
@@ -234,7 +276,8 @@ fun StartHomeScreen(
                     uiState.wifiState?.connectConfig?.ssid,
                     uiState.wifiState?.connectConfig?.passphrase,
                     uiState.wifiState?.connectConfig?.bssid,
-                    uiState.wifiState?.connectConfig?.port.toString())
+                    uiState.wifiState?.connectConfig?.port.toString()
+                )
                 // Display connectUri
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(text = stringResource(id = R.string.instruction_start_hotspot))
@@ -359,6 +402,18 @@ fun StartHomeScreen(
             }
         }
     }
+}
+
+fun stopHotspotConfirmationDialog(context: Context, onConfirm: (Boolean) -> Unit){
+    AlertDialog.Builder(context)
+        .setTitle("Do you want to turn off the hotspot?")
+        .setPositiveButton("Yes"){ _, _ ->
+            onConfirm(true)
+        }
+        .setNegativeButton("No"){ _, _ ->
+            onConfirm(false)
+        }
+        .show()
 }
 
 // Enable users to copy text by holding down the text for a long press

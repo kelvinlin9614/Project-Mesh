@@ -1,9 +1,6 @@
 package com.greybox.projectmesh.viewModel
 
 import android.util.Log
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.greybox.projectmesh.model.HomeScreenModel
@@ -25,6 +22,7 @@ class HomeScreenViewModel(di: DI): ViewModel(){
     val uiState: Flow<HomeScreenModel> = _uiState.asStateFlow()
     // di is used to get the AndroidVirtualNode instance
     private val node: AndroidVirtualNode by di.instance()
+
     init {
         // launch a coroutine
         viewModelScope.launch {
@@ -39,7 +37,6 @@ class HomeScreenViewModel(di: DI): ViewModel(){
                         connectUri = it.connectUri,
                         localAddress = it.address,
                         hotspotStatus = it.wifiState.hotspotIsStarted,
-                        wifiConnectionsEnabled = (it.wifiState.connectConfig != null),
                         nodesOnMesh = it.originatorMessages.keys
                     )
                 }
@@ -69,7 +66,6 @@ class HomeScreenViewModel(di: DI): ViewModel(){
             catch (e: Exception){
                 Log.e("HomeScreenViewModel", "onConnectWifi: ${e.message}")
             }
-
         }
     }
 
