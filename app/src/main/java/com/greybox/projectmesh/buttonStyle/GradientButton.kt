@@ -68,3 +68,49 @@ fun GradientButton(
         )
     }
 }
+
+@Composable
+fun GradientLongButton(
+    text: String,
+    modifier: Modifier = Modifier,
+    gradientColors: List<Color> = listOf(Color(0xFF4CAF50), Color(0xFF81C784)), // Default gradient colors
+    textColor: Color = Color.White,
+    //maxWidth: Dp = 120.dp,
+    onClick: () -> Unit
+) {
+    var isPressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(if (isPressed) 0.85f else 1f) // Scale down when pressed
+    LaunchedEffect(isPressed) {
+        if (isPressed) {
+            delay(100) // Wait for 100 ms
+            isPressed = false
+        }
+    }
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .scale(scale)
+            .shadow(8.dp, RoundedCornerShape(12.dp)) // Shadow effect
+            .background(
+                brush = Brush.horizontalGradient(gradientColors),
+                shape = RoundedCornerShape(12.dp)
+            )
+            .height(50.dp) // Height of the button
+            //.widthIn(min = 120.dp, max = maxWidth) // Width of the button
+            //.padding(horizontal = 16.dp)
+            .clickable {
+                isPressed = true
+                onClick()
+            },
+        contentAlignment = Alignment.Center // Center content in the box
+    ) {
+        Text(
+            text = text,
+            color = textColor,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, // Truncate text if it overflows
+        )
+    }
+}

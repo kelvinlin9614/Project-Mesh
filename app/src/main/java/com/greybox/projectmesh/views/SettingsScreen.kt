@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
@@ -53,10 +52,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.greybox.projectmesh.R
 import com.greybox.projectmesh.ViewModelFactory
 import com.greybox.projectmesh.buttonStyle.GradientButton
+import com.greybox.projectmesh.buttonStyle.GradientLongButton
 import com.greybox.projectmesh.ui.theme.AppTheme
+import com.greybox.projectmesh.viewModel.HomeScreenViewModel
+import com.greybox.projectmesh.viewModel.SendScreenViewModel
 import com.greybox.projectmesh.viewModel.SettingsScreenViewModel
 import org.kodein.di.compose.localDI
-import com.greybox.projectmesh.util.checkStaApConcurrency
 import org.kodein.di.instance
 
 
@@ -66,7 +67,7 @@ fun SettingsScreen(
         factory = ViewModelFactory(
             di = localDI(),
             owner = LocalSavedStateRegistryOwner.current,
-            vmFactory = { SettingsScreenViewModel(it) },
+            vmFactory = { di, savedStateHandle -> SettingsScreenViewModel(di, savedStateHandle)},
             defaultArgs = null,
         )),
     onThemeChange: (AppTheme) -> Unit,
@@ -281,27 +282,11 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .padding(0.dp, 16.dp))
                 {
-                    Text(
-                        stringResource(id = R.string.manual_test), style = TextStyle(fontSize = 18.sp), modifier = Modifier
-                            .align(Alignment.CenterVertically))
-                    Spacer(modifier = Modifier.weight(1f))
-                    GradientButton(
+                    GradientLongButton(
                         text = stringResource(id = R.string.reset),
                         onClick = {
-                            checkStaApConcurrency(context){ supported ->
-                                if (supported == null) {
-                                    settingPref.edit()
-                                        .putBoolean("StaApConcurrencySupported", false)
-                                        .putBoolean("StaApConcurrencyKnown", false)
-                                        .apply()
-                                }
-                                else{
-                                    settingPref.edit()
-                                        .putBoolean("StaApConcurrencySupported", supported)
-                                        .putBoolean("StaApConcurrencyKnown", true)
-                                        .apply()
-                                }
-                            }
+                            viewModel.updateConcurrencySettings(false, true)
+                            Toast.makeText(context, "Reset STA/AP Concurrency Status -> Unknown", Toast.LENGTH_SHORT).show()
                         }
                     )
                 }

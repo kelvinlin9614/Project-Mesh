@@ -1,6 +1,7 @@
 package com.greybox.projectmesh.viewModel
 
 import android.net.Uri
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.greybox.projectmesh.model.SendScreenModel
@@ -15,6 +16,7 @@ import org.kodein.di.instance
 
 class SendScreenViewModel(
     di: DI,
+    savedStateHandle: SavedStateHandle,
     private val onSwitchToSelectDestNode: (List<Uri>) -> Unit
 ): ViewModel() {
     // _uiState will be updated whenever there is a change in the UI state

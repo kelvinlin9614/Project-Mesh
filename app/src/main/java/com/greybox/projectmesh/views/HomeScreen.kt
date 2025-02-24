@@ -30,6 +30,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -37,6 +38,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -52,7 +54,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSavedStateRegistryOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -68,7 +72,6 @@ import com.greybox.projectmesh.ViewModelFactory
 import com.greybox.projectmesh.buttonStyle.WhiteButton
 import com.greybox.projectmesh.hasNearbyWifiDevicesOrLocationPermission
 import com.greybox.projectmesh.model.HomeScreenModel
-import com.greybox.projectmesh.util.getLatestConcurrencySupportAnswer
 import com.greybox.projectmesh.viewModel.HomeScreenViewModel
 import com.journeyapps.barcodescanner.BarcodeEncoder
 import com.journeyapps.barcodescanner.ScanContract
@@ -81,15 +84,18 @@ import com.ustadmobile.meshrabiya.vnet.wifi.state.WifiStationState
 import org.kodein.di.compose.localDI
 import org.kodein.di.direct
 import org.kodein.di.instance
+import androidx.compose.runtime.State
+import com.greybox.projectmesh.hasStaApConcurrency
+import com.greybox.projectmesh.viewModel.NetworkScreenViewModel
 
 @Composable
 // We customize the viewModel since we need to inject dependencies
-fun HomeScreen(viewModel: HomeScreenViewModel = viewModel
-    (
+fun HomeScreen(
+    viewModel: HomeScreenViewModel = viewModel(
     factory = ViewModelFactory(
         di = localDI(),
         owner = LocalSavedStateRegistryOwner.current,
-        vmFactory = { HomeScreenViewModel(it) },
+        vmFactory = { di, savedStateHandle -> HomeScreenViewModel(di, savedStateHandle) },
         defaultArgs = null)),
     deviceName: String?
 )
@@ -98,6 +104,8 @@ fun HomeScreen(viewModel: HomeScreenViewModel = viewModel
     val di = localDI()
     val uiState: HomeScreenModel by viewModel.uiState.collectAsState(initial = HomeScreenModel())
     val node: VirtualNode by di.instance()
+    val currConcurrencyKnown = viewModel.concurrencyKnown.collectAsState()
+    val currConcurrencySupported = viewModel.concurrencySupported.collectAsState()
 
     // Request location permission using rememberLauncherForActivityResult
     var locationPermissionGranted by remember { mutableStateOf(false) }
@@ -136,6 +144,12 @@ fun HomeScreen(viewModel: HomeScreenViewModel = viewModel
         }
     } }
 
+    // if not known and android version >= 11, then use official api to check concurrency
+    if(!currConcurrencyKnown.value && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
+        viewModel.saveConcurrencyKnown(true)
+        viewModel.saveConcurrencySupported(context.hasStaApConcurrency())
+    }
+
     // Launch the home screen
     StartHomeScreen(
         uiState = uiState,
@@ -150,7 +164,9 @@ fun HomeScreen(viewModel: HomeScreenViewModel = viewModel
         },
         onClickDisconnectWifiStation = viewModel::onClickDisconnectStation,
         deviceName = deviceName,
-        context = context
+        context = context,
+        currConcurrencyKnown = currConcurrencyKnown,
+        currConcurrencySupported = currConcurrencySupported
     )
 }
 
@@ -163,11 +179,15 @@ fun StartHomeScreen(
     onClickDisconnectWifiStation: () -> Unit = { },
     viewModel: HomeScreenViewModel = viewModel(),
     deviceName: String?,
-    context: Context
+    context: Context,
+    currConcurrencyKnown: State<Boolean>,
+    currConcurrencySupported: State<Boolean>
 ){
     val di = localDI()
     val barcodeEncoder = remember { BarcodeEncoder() }
     var userEnteredConnectUri by rememberSaveable { mutableStateOf("") }
+    val showNoConcurrencyWarning by viewModel.showNoConcurrencyWarning.collectAsState()
+    val showConcurrencyWarning by viewModel.showConcurrencyWarning.collectAsState()
     // connect to other device via connect uri
     fun connect(uri: String): Unit {
         try {
@@ -207,6 +227,16 @@ fun StartHomeScreen(
         }
     }
 
+    // Show warning popup when device does not support STA/AP concurrency
+    if (showNoConcurrencyWarning) {
+        NoConcurrencyWarningDialog(onDismiss = { viewModel.dismissNoConcurrencyWarning() })
+    }
+
+    // Show warning popup when device does not support STA/AP concurrency
+    if (showConcurrencyWarning) {
+        ConcurrencyWarningDialog(onDismiss = { viewModel.dismissConcurrencyWarning() })
+    }
+
     Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
         Column {
             Spacer(modifier = Modifier.height(6.dp))
@@ -241,7 +271,10 @@ fun StartHomeScreen(
                         // If not connected to a WiFi, enable the button
                         // Else, check if the device supports WiFi STA/AP Concurrency
                         // If it does, enable the button. Otherwise, disable it
-                        enabled = if(stationState == null || stationState.status == WifiStationState.Status.INACTIVE) true else getLatestConcurrencySupportAnswer()
+                        enabled = if(stationState == null || stationState.status == WifiStationState.Status.INACTIVE)
+                            true
+                        else
+                            currConcurrencySupported.value
                     )
                 }
             }
@@ -316,7 +349,10 @@ fun StartHomeScreen(
                                 // If the hotspot isn't started, enable the button
                                 // Else, check if the device supports WiFi STA/AP Concurrency
                                 // If it does, enable the button. Otherwise, disable it
-                                enabled = if(!uiState.hotspotStatus) true else getLatestConcurrencySupportAnswer()
+                                enabled = if(!uiState.hotspotStatus)
+                                    true
+                                else
+                                    currConcurrencySupported.value
                             )
                         }
                         Spacer(modifier = Modifier.height(12.dp))
@@ -339,7 +375,10 @@ fun StartHomeScreen(
                             // If the hotspot isn't started, enable the button
                             // Else, check if the device supports WiFi STA/AP Concurrency
                             // If it does, enable the button. Otherwise, disable it
-                            enabled = if (!uiState.hotspotStatus) true else getLatestConcurrencySupportAnswer()
+                            enabled = if (!uiState.hotspotStatus)
+                                true
+                            else
+                                currConcurrencySupported.value
                         )
                     }
                 }
@@ -447,18 +486,25 @@ fun LongPressCopyableText(context: Context,
 @Composable
 fun QRCodeView(qrcodeUri: String, barcodeEncoder: BarcodeEncoder, ssid: String?, password: String?,
                mac: String?, port: String?) {
+    val configuration = LocalConfiguration.current
+    val screenWidthDp = configuration.screenWidthDp.dp
+    val density = LocalDensity.current
+    // Convert dp to int once and remember the value
+    val qrCodeSize = remember(density, screenWidthDp) {
+        with(density) { screenWidthDp.times(0.35f).roundToPx() } // Converts to Int
+    }
     val qrCodeBitMap = remember(qrcodeUri) {
         barcodeEncoder.encodeBitmap(
-            qrcodeUri, BarcodeFormat.QR_CODE, 500, 500
+            qrcodeUri, BarcodeFormat.QR_CODE, qrCodeSize, qrCodeSize
         ).asImageBitmap()
     }
-    Row {
+    Row (modifier = Modifier.fillMaxWidth()) {
         // QR Code left side, Device info on the right side
         Image(
             bitmap = qrCodeBitMap,
             contentDescription = "QR Code"
         )
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(8.dp))
         Column(
             modifier = Modifier.weight(1f)
         ) {
@@ -467,9 +513,46 @@ fun QRCodeView(qrcodeUri: String, barcodeEncoder: BarcodeEncoder, ssid: String?,
             Spacer(modifier = Modifier.height(10.dp))
             Text(text = "Password: $password")
             Spacer(modifier = Modifier.height(10.dp))
-            Text(text = "MAC Address: $mac")
+            Text(text = "MAC: $mac")
             Spacer(modifier = Modifier.height(10.dp))
             Text(text = "Port: $port")
         }
     }
 }
+
+@Composable
+fun NoConcurrencyWarningDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = { onDismiss() },
+        title = { Text("STA/AP Concurrency Not Supported") },
+        text = {
+            Text(
+                "Based on our test, we detected that your device does not support simultaneous Wi-Fi and hotspot usage (STA/AP concurrency)."
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onDismiss() }) {
+                Text("OK")
+            }
+        }
+    )
+}
+
+@Composable
+fun ConcurrencyWarningDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = { onDismiss() },
+        title = { Text("STA/AP Concurrency Supported") },
+        text = {
+            Text(
+                "Based on our test, we detected that your device support simultaneous Wi-Fi and hotspot usage (STA/AP concurrency)."
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onDismiss() }) {
+                Text("OK")
+            }
+        }
+    )
+}
+

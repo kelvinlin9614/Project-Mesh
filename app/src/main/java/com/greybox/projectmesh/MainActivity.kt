@@ -29,6 +29,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSavedStateRegistryOwner
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -59,7 +60,7 @@ import org.kodein.di.instance
 import java.io.File
 import java.util.Locale
 import java.net.InetAddress
-import com.greybox.projectmesh.util.checkStaApConcurrency
+import com.greybox.projectmesh.viewModel.HomeScreenViewModel
 
 class MainActivity : ComponentActivity(), DIAware {
     override val di by closestDI()
@@ -155,25 +156,6 @@ class MainActivity : ComponentActivity(), DIAware {
         if (!isBatteryOptimizationDisabled(this)) {
             promptDisableBatteryOptimization(this)
         }
-
-        val concurrencyKnown = settingPref.getBoolean("StaApConcurrencyKnown", false)
-
-        if(!concurrencyKnown){
-            checkStaApConcurrency(this){ supported ->
-                if (supported == null) {
-                    settingPref.edit()
-                        .putBoolean("StaApConcurrencySupported", false)
-                        .putBoolean("StaApConcurrencyKnown", false)
-                        .apply()
-                }
-                else{
-                    settingPref.edit()
-                        .putBoolean("StaApConcurrencySupported", supported)
-                        .putBoolean("StaApConcurrencyKnown", true)
-                        .apply()
-                }
-            }
-        }
     }
 
     private fun updateLocale(languageCode: String): Locale {
@@ -212,11 +194,9 @@ fun BottomNavApp(di: DI,
                  onSaveToFolderChange: (String) -> Unit
 ) = withDI(di)
 {
-
     val navController = rememberNavController()
     // Observe the current route directly through the back stack entry
     val currentRoute = navController.currentBackStackEntryFlow.collectAsState(initial = null)
-
     LaunchedEffect(currentRoute.value?.destination?.route) {
         if(currentRoute.value?.destination?.route == BottomNavItem.Settings.route){
             currentRoute.value?.destination?.route?.let { route ->
@@ -230,7 +210,8 @@ fun BottomNavApp(di: DI,
     ){ innerPadding ->
         NavHost(navController, startDestination = startDestination, Modifier.padding(innerPadding))
         {
-            composable(BottomNavItem.Home.route) { HomeScreen(deviceName = deviceName) }
+            composable(BottomNavItem.Home.route) {
+                HomeScreen(deviceName = deviceName) }
             composable(BottomNavItem.Network.route) { NetworkScreen(
                 onClickNetworkNode = { ip ->
                     navController.navigate("chatScreen/${ip}")

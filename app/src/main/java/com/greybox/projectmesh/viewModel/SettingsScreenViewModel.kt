@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import com.greybox.projectmesh.ui.theme.AppTheme
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,7 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import org.kodein.di.DI
 import org.kodein.di.instance
 
-class SettingsScreenViewModel(di: DI): ViewModel() {
+class SettingsScreenViewModel(di: DI, savedStateHandle: SavedStateHandle): ViewModel() {
     // inject SharedPreferences
     private val settingPrefs: SharedPreferences by di.instance(tag = "settings")
 
@@ -29,7 +30,7 @@ class SettingsScreenViewModel(di: DI): ViewModel() {
     val deviceName: StateFlow<String> = _deviceName
 
     // Auto Finish State
-    private val _autoFinish = MutableStateFlow(false)
+    private val _autoFinish = MutableStateFlow(loadAutoFinish())
     val autoFinish: StateFlow<Boolean> = _autoFinish
 
     // Save To Folder (directory path)
@@ -85,7 +86,7 @@ class SettingsScreenViewModel(di: DI): ViewModel() {
 
     fun saveAutoFinish(autoFinish: Boolean) {
         _autoFinish.value = autoFinish
-        settingPrefs.edit().putBoolean("auto_finish", autoFinish).apply()
+        settingPrefs.edit().putBoolean(AUTO_FINISH_KEY, autoFinish).apply()
     }
 
     private fun loadSaveToFolder(): String {
@@ -99,6 +100,14 @@ class SettingsScreenViewModel(di: DI): ViewModel() {
         _saveToFolder.value = saveToFolder
         settingPrefs.edit().putString(SAVE_TO_FOLDER_KEY, saveToFolder).apply()
     }
+
+    fun updateConcurrencySettings(concurrencyKnown: Boolean, concurrencySupported: Boolean) {
+        settingPrefs.edit()
+            .putBoolean("concurrency_known", concurrencyKnown)
+            .putBoolean("concurrency_supported", concurrencySupported)
+            .apply()
+    }
+
 
     companion object{
         private const val THEME_KEY = "app_theme"

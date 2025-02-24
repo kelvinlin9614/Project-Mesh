@@ -1,5 +1,6 @@
 package com.greybox.projectmesh.viewModel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.Flow
@@ -16,7 +17,7 @@ import kotlinx.coroutines.launch
 import org.kodein.di.instance
 import java.net.InetAddress
 
-class NetworkScreenViewModel(di:DI): ViewModel() {
+class NetworkScreenViewModel(di:DI, savedStateHandle: SavedStateHandle): ViewModel() {
     // _uiState will be updated whenever there is a change in the UI state
     private val _uiState = MutableStateFlow(NetworkScreenModel())
     // uiState is a read-only property that shows the current UI state

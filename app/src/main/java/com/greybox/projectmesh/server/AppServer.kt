@@ -346,7 +346,7 @@ class AppServer(
         }
     }
 
-    fun sendDeviceName(wifiAddress: InetAddress, port: Int = 4242) {
+    fun sendDeviceName(wifiAddress: InetAddress, port: Int = DEFAULT_PORT) {
         scope.launch {
             try {
                 Log.d("AppServer", "wifiAddress: $wifiAddress")
@@ -634,7 +634,7 @@ class AppServer(
     }
 
     companion object {
-        const val DEFAULT_PORT = 4242
+        const val DEFAULT_PORT = 9614
         val CHAT_TYPE_PLAINTEXT = "text/plain; charset=utf-8".toMediaType()
     }
 }

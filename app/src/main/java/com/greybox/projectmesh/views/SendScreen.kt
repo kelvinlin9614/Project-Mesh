@@ -26,6 +26,7 @@ import com.greybox.projectmesh.R
 import com.greybox.projectmesh.ViewModelFactory
 import com.greybox.projectmesh.buttonStyle.WhiteButton
 import com.greybox.projectmesh.model.SendScreenModel
+import com.greybox.projectmesh.viewModel.SelectDestNodeScreenViewModel
 import com.greybox.projectmesh.viewModel.SendScreenViewModel
 import org.kodein.di.compose.localDI
 
@@ -36,7 +37,7 @@ fun SendScreen(
         factory = ViewModelFactory(
             di = localDI(),
             owner = LocalSavedStateRegistryOwner.current,
-            vmFactory = { SendScreenViewModel(it, onSwitchToSelectDestNode) },
+            vmFactory = { di, savedStateHandle -> SendScreenViewModel(di, savedStateHandle, onSwitchToSelectDestNode)},
             defaultArgs = null,
         )
     ),

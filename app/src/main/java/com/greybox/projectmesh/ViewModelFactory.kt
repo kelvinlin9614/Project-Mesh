@@ -12,13 +12,13 @@ class ViewModelFactory<T: ViewModel>(
     private val di: DI,
     owner: SavedStateRegistryOwner,
     defaultArgs: Bundle?,
-    private val vmFactory: (DI) -> T
+    private val vmFactory: (DI, SavedStateHandle) -> T
 ): AbstractSavedStateViewModelFactory(owner, defaultArgs) {
     override fun <T : ViewModel> create(
         key: String,
         modelClass: Class<T>,
         handle: SavedStateHandle
     ): T {
-        return vmFactory(di) as T
+        return vmFactory(di, handle) as T
     }
 }

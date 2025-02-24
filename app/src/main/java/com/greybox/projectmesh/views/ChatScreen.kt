@@ -31,6 +31,7 @@ import com.greybox.projectmesh.buttonStyle.WhiteButton
 import com.greybox.projectmesh.model.ChatScreenModel
 import com.greybox.projectmesh.model.PingScreenModel
 import com.greybox.projectmesh.viewModel.ChatScreenViewModel
+import com.greybox.projectmesh.viewModel.HomeScreenViewModel
 import com.greybox.projectmesh.viewModel.PingScreenViewModel
 import com.ustadmobile.meshrabiya.ext.addressToDotNotation
 import com.ustadmobile.meshrabiya.mmcp.MmcpOriginatorMessage
@@ -47,7 +48,7 @@ fun ChatScreen(
         factory = ViewModelFactory(
             di = localDI(),
             owner = LocalSavedStateRegistryOwner.current,
-            vmFactory = { ChatScreenViewModel(it, virtualAddress) },
+            vmFactory = { di, savedStateHandle -> ChatScreenViewModel(di, savedStateHandle, virtualAddress)},
             defaultArgs = null
         )
     )

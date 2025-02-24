@@ -2,6 +2,7 @@ package com.greybox.projectmesh.viewModel
 
 import android.net.Uri
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.greybox.projectmesh.model.SelectDestNodeScreenModel
@@ -24,6 +25,7 @@ import java.net.InetAddress
 
 class SelectDestNodeScreenViewModel(
     di: DI,
+    savedStateHandle: SavedStateHandle,
     private val sendUris: List<Uri>,
     private val popBackWhenDone: () -> Unit
 ): ViewModel(){

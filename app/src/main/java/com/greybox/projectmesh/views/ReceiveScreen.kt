@@ -53,6 +53,7 @@ import org.kodein.di.DI
 import org.kodein.di.instance
 import java.io.File
 import androidx.compose.material3.HorizontalDivider
+import com.greybox.projectmesh.viewModel.PingScreenViewModel
 
 @Composable
 fun ReceiveScreen(
@@ -60,7 +61,7 @@ fun ReceiveScreen(
         factory = ViewModelFactory(
             di = localDI(),
             owner = LocalSavedStateRegistryOwner.current,
-            vmFactory = { ReceiveScreenViewModel(it) },
+            vmFactory = { di, savedStateHandle -> ReceiveScreenViewModel(di, savedStateHandle) },
             defaultArgs = null,
         )
     ),

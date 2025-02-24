@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.greybox.projectmesh.ViewModelFactory
 import com.greybox.projectmesh.model.SelectDestNodeScreenModel
+import com.greybox.projectmesh.viewModel.PingScreenViewModel
 import com.greybox.projectmesh.viewModel.SelectDestNodeScreenViewModel
 import org.kodein.di.compose.localDI
 
@@ -30,7 +31,7 @@ fun SelectDestNodeScreen(
         factory = ViewModelFactory(
             di = localDI(),
             owner = LocalSavedStateRegistryOwner.current,
-            vmFactory = { SelectDestNodeScreenViewModel(it, uris, popBackWhenDone) },
+            vmFactory = { di, savedStateHandle -> SelectDestNodeScreenViewModel(di, savedStateHandle, uris, popBackWhenDone) },
             defaultArgs = null,
         )
     )

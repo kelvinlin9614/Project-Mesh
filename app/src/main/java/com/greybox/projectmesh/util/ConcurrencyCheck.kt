@@ -6,17 +6,19 @@ import android.content.SharedPreferences
 import android.net.wifi.WifiManager
 import android.os.Build
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import org.kodein.di.compose.localDI
 import org.kodein.di.instance
 
-@Composable
-fun getLatestConcurrencySupportAnswer(): Boolean {
-    val di = localDI()
-    val settingPref: SharedPreferences by di.instance(tag="settings")
-    val concurrencyKnown = settingPref.getBoolean("StaApConcurrencyKnown", false)
-    val concurrencySupported = settingPref.getBoolean("StaApConcurrencySupported", false)
-    return concurrencyKnown && concurrencySupported
-}
+//@Composable
+//fun getLatestConcurrencySupportAnswer(
+//    concurrencyKnown: Boolean,
+//    concurrencySupported: Boolean
+//): Boolean {
+//    val di = localDI()
+//    val settingPref: SharedPreferences by di.instance(tag="settings")
+//    return concurrencyKnown && concurrencySupported
+//}
 
 /**
  * Tries to check STA+AP concurrency support:

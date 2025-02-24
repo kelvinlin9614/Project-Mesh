@@ -28,6 +28,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.greybox.projectmesh.GlobalApp
 import com.greybox.projectmesh.ViewModelFactory
 import com.greybox.projectmesh.model.NetworkScreenModel
+import com.greybox.projectmesh.viewModel.HomeScreenViewModel
 import com.greybox.projectmesh.viewModel.NetworkScreenViewModel
 import com.ustadmobile.meshrabiya.ext.addressToDotNotation
 import com.ustadmobile.meshrabiya.vnet.VirtualNode
@@ -41,7 +42,7 @@ fun NetworkScreen(
     factory = ViewModelFactory(
         di = localDI(),
         owner = LocalSavedStateRegistryOwner.current,
-        vmFactory = { NetworkScreenViewModel(it) },
+        vmFactory = { di, savedStateHandle -> NetworkScreenViewModel(di, savedStateHandle)},
         defaultArgs = null))
 ) {
     // declare the UI state, we can use the uiState to access the current state of the viewModel

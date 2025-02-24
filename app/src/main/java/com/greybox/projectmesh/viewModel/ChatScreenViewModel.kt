@@ -1,5 +1,6 @@
 package com.greybox.projectmesh.viewModel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.greybox.projectmesh.GlobalApp
@@ -22,6 +23,7 @@ import java.net.InetAddress
 
 class ChatScreenViewModel(
     di: DI,
+    savedStateHandle: SavedStateHandle,
     virtualAddress: InetAddress
 ): ViewModel() {
     // _uiState will be updated whenever there is a change in the UI state
