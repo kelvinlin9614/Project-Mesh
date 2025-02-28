@@ -21,7 +21,6 @@ data class HomeScreenModel(
 ){
     val wifiConnectionEnabled: Boolean
         get() = wifiState?.connectConfig != null
-
     val connectBandVisible: Boolean
         get() = Build.VERSION.SDK_INT >= 29 && wifiState?.connectConfig == null
 }

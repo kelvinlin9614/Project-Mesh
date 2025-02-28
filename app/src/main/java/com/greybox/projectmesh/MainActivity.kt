@@ -247,4 +247,3 @@ fun BottomNavApp(di: DI,
         }
     }
 }
-
