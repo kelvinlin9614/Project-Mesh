@@ -1,4 +1,4 @@
-package com.greybox.projectmesh
+package com.greybox.projectmesh.extension
 
 import android.Manifest
 import android.content.Context

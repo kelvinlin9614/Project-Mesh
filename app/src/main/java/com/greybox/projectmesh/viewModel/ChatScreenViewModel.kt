@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.greybox.projectmesh.GlobalApp
 import com.greybox.projectmesh.db.MeshDatabase
 import com.greybox.projectmesh.db.entities.Message
-import com.greybox.projectmesh.model.ChatScreenModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +19,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.kodein.di.instance
 import java.net.InetAddress
+
+data class ChatScreenModel(
+    val deviceName: String? = null,
+    val virtualAddress: InetAddress = InetAddress.getByName("192.168.0.1"),
+    val allChatMessages: List<Message> = emptyList()
+)
 
 class ChatScreenViewModel(
     di: DI,

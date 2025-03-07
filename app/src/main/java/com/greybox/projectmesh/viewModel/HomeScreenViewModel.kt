@@ -6,11 +6,11 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.greybox.projectmesh.model.HomeScreenModel
 import com.ustadmobile.meshrabiya.vnet.AndroidVirtualNode
 import com.ustadmobile.meshrabiya.vnet.wifi.ConnectBand
 import com.ustadmobile.meshrabiya.vnet.wifi.HotspotType
 import com.ustadmobile.meshrabiya.vnet.wifi.WifiConnectConfig
+import com.ustadmobile.meshrabiya.vnet.wifi.state.MeshrabiyaWifiState
 import com.ustadmobile.meshrabiya.vnet.wifi.state.WifiStationState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -23,6 +23,26 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.kodein.di.DI
 import org.kodein.di.instance
 
+
+data class HomeScreenModel(
+    val wifiState: MeshrabiyaWifiState? = null,
+    val connectUri: String? = null,
+    val localAddress: Int = 0,
+    val bandMenu: List<ConnectBand> = listOf(ConnectBand.BAND_2GHZ),
+    val band: ConnectBand = bandMenu.first(),
+    val hotspotTypeMenu: List<HotspotType> = listOf(HotspotType.AUTO,
+        HotspotType.WIFIDIRECT_GROUP,
+        HotspotType.LOCALONLY_HOTSPOT),
+    val hotspotTypeToCreate: HotspotType = hotspotTypeMenu.first(),
+    val hotspotStatus: Boolean = false,
+    val isWifiConnected: Boolean = false,
+    val nodesOnMesh: Set<Int> = emptySet(),
+){
+    val wifiConnectionEnabled: Boolean
+        get() = wifiState?.connectConfig != null
+    val connectBandVisible: Boolean
+        get() = Build.VERSION.SDK_INT >= 29 && wifiState?.connectConfig == null
+}
 
 class HomeScreenViewModel(di: DI,
                           savedStateHandle: SavedStateHandle): ViewModel(){

@@ -17,8 +17,8 @@ import androidx.compose.ui.platform.LocalSavedStateRegistryOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.greybox.projectmesh.ViewModelFactory
-import com.greybox.projectmesh.model.PingScreenModel
 import com.greybox.projectmesh.viewModel.ChatScreenViewModel
+import com.greybox.projectmesh.viewModel.PingScreenModel
 import com.greybox.projectmesh.viewModel.PingScreenViewModel
 import com.ustadmobile.meshrabiya.ext.addressToDotNotation
 import com.ustadmobile.meshrabiya.mmcp.MmcpOriginatorMessage

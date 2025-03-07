@@ -45,7 +45,6 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.greybox.projectmesh.R
 import com.greybox.projectmesh.ViewModelFactory
-import com.greybox.projectmesh.model.ReceiveScreenModel
 import com.greybox.projectmesh.server.AppServer
 import com.greybox.projectmesh.viewModel.ReceiveScreenViewModel
 import org.kodein.di.compose.localDI
@@ -54,6 +53,7 @@ import org.kodein.di.instance
 import java.io.File
 import androidx.compose.material3.HorizontalDivider
 import com.greybox.projectmesh.viewModel.PingScreenViewModel
+import com.greybox.projectmesh.viewModel.ReceiveScreenModel
 
 @Composable
 fun ReceiveScreen(

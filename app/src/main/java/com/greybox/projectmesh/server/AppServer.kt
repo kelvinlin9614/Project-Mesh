@@ -346,7 +346,7 @@ class AppServer(
         }
     }
 
-    fun sendDeviceName(wifiAddress: InetAddress, port: Int = DEFAULT_PORT) {
+    suspend fun sendDeviceName(wifiAddress: InetAddress, port: Int = DEFAULT_PORT){
         scope.launch {
             try {
                 Log.d("AppServer", "wifiAddress: $wifiAddress")
@@ -362,13 +362,18 @@ class AppServer(
                 Log.d("AppServer", "Remote device name: $remoteDeviceName")
 
                 if (remoteDeviceName != null) {
-                    wifiAddress.hostAddress?.let { GlobalApp.DeviceInfoManager.addDevice(it, remoteDeviceName) }
+                    wifiAddress.hostAddress?.let {
+                        GlobalApp.DeviceInfoManager.addDevice(
+                            it,
+                            remoteDeviceName
+                        )
+                    }
                 }
-            }
-            catch (e: Exception) {
+            } catch (e: Exception) {
                 e.printStackTrace()
-                Log.e("AppServer", "Failed to get device name from " +
-                        wifiAddress.hostAddress
+                Log.e(
+                    "AppServer", "Failed to get device name from " +
+                            wifiAddress.hostAddress
                 )
             }
         }

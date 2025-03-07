@@ -27,8 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.greybox.projectmesh.GlobalApp
 import com.greybox.projectmesh.ViewModelFactory
-import com.greybox.projectmesh.model.NetworkScreenModel
 import com.greybox.projectmesh.viewModel.HomeScreenViewModel
+import com.greybox.projectmesh.viewModel.NetworkScreenModel
 import com.greybox.projectmesh.viewModel.NetworkScreenViewModel
 import com.ustadmobile.meshrabiya.ext.addressToDotNotation
 import com.ustadmobile.meshrabiya.vnet.VirtualNode

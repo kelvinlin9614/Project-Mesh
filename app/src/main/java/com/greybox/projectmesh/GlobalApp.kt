@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.room.Room
 import com.greybox.projectmesh.db.MeshDatabase
+import com.greybox.projectmesh.extension.networkDataStore
 import com.greybox.projectmesh.server.AppServer
 import com.ustadmobile.meshrabiya.ext.addressToDotNotation
 import com.ustadmobile.meshrabiya.ext.asInetAddress
@@ -28,6 +29,7 @@ import org.kodein.di.singleton
 import java.io.File
 import java.net.InetAddress
 import java.time.Duration
+import java.util.concurrent.ConcurrentHashMap
 
 /*
 initialize global variables and DI(dependency injection) container
@@ -39,7 +41,7 @@ class GlobalApp : Application(), DIAware {
     private val addressKey = intPreferencesKey("virtual_node_address")
     data object DeviceInfoManager {
         // Global HashMap to store IP-DeviceName mapping
-        val deviceNameMap = HashMap<String, String?>()
+        private val deviceNameMap = ConcurrentHashMap<String, String?>()
 
         // Helper method to add/update a device name
         fun addDevice(ipAddress: String, name: String?) {
@@ -60,9 +62,6 @@ class GlobalApp : Application(), DIAware {
 
         fun getChatName(inetAddress: InetAddress): String {
             return inetAddress.hostAddress
-//            val deviceName = getDeviceName(inetAddress) ?: "Unknown"
-//            val addressDotNotation = inetAddress.hostAddress
-//            return "$deviceName ($addressDotNotation)"
         }
     }
     private val diModule = DI.Module("project_mesh") {

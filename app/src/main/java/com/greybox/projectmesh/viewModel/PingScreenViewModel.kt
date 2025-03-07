@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.greybox.projectmesh.GlobalApp
-import com.greybox.projectmesh.model.PingScreenModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,6 +20,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.kodein.di.instance
 import java.net.InetAddress
+
+data class PingScreenModel(
+    val deviceName: String? = null,
+    val virtualAddress: InetAddress = InetAddress.getByName("192.168.0.1"),
+    val allOriginatorMessages: List<VirtualNode.LastOriginatorMessage> = emptyList()
+)
 
 class PingScreenViewModel(
     di: DI,

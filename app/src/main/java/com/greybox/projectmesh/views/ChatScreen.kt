@@ -27,9 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.greybox.projectmesh.GlobalApp
 import com.greybox.projectmesh.ViewModelFactory
-import com.greybox.projectmesh.buttonStyle.WhiteButton
-import com.greybox.projectmesh.model.ChatScreenModel
-import com.greybox.projectmesh.model.PingScreenModel
+import com.greybox.projectmesh.viewModel.ChatScreenModel
 import com.greybox.projectmesh.viewModel.ChatScreenViewModel
 import com.greybox.projectmesh.viewModel.HomeScreenViewModel
 import com.greybox.projectmesh.viewModel.PingScreenViewModel
@@ -60,9 +58,6 @@ fun ChatScreen(
         Column(modifier = Modifier
             .fillMaxSize()
             .padding(bottom = 72.dp)) {
-//            Button(onClick = onClickButton, modifier = Modifier.fillMaxWidth()) {
-//                Text(text = "Ping")
-//            }
             DisplayAllMessages(uiState, onClickButton)
         }
         Row(modifier = Modifier

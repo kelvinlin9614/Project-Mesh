@@ -1,6 +1,5 @@
 package com.greybox.projectmesh.views
 
-import android.Manifest
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
@@ -43,7 +42,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,15 +63,12 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.zxing.BarcodeFormat
-import com.greybox.projectmesh.NEARBY_WIFI_PERMISSION_NAME
+import com.greybox.projectmesh.extension.NEARBY_WIFI_PERMISSION_NAME
 import com.greybox.projectmesh.R
 import com.greybox.projectmesh.ViewModelFactory
-import com.greybox.projectmesh.buttonStyle.WhiteButton
-import com.greybox.projectmesh.hasNearbyWifiDevicesOrLocationPermission
-import com.greybox.projectmesh.model.HomeScreenModel
+import com.greybox.projectmesh.extension.hasNearbyWifiDevicesOrLocationPermission
 import com.greybox.projectmesh.viewModel.HomeScreenViewModel
 import com.journeyapps.barcodescanner.BarcodeEncoder
 import com.journeyapps.barcodescanner.ScanContract
@@ -87,10 +82,14 @@ import org.kodein.di.compose.localDI
 import org.kodein.di.direct
 import org.kodein.di.instance
 import androidx.compose.runtime.State
-import com.greybox.projectmesh.hasStaApConcurrency
-import com.greybox.projectmesh.viewModel.NetworkScreenViewModel
+import com.greybox.projectmesh.extension.hasStaApConcurrency
+import com.greybox.projectmesh.ui.theme.TransparentButton
+import com.greybox.projectmesh.viewModel.HomeScreenModel
 import com.ustadmobile.meshrabiya.vnet.wifi.ConnectBand
 import com.ustadmobile.meshrabiya.vnet.wifi.HotspotType
+import com.greybox.projectmesh.components.ConnectWifiLauncherResult
+import com.greybox.projectmesh.components.ConnectWifiLauncherStatus
+import com.greybox.projectmesh.components.meshrabiyaConnectLauncher
 
 @Composable
 // We customize the viewModel since we need to inject dependencies
@@ -126,6 +125,8 @@ fun HomeScreen(
         viewModel.saveConcurrencySupported(context.hasStaApConcurrency())
     }
 
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
     // Launch the home screen
     StartHomeScreen(
         uiState = uiState,
@@ -152,8 +153,28 @@ fun HomeScreen(
         currConcurrencyKnown = currConcurrencyKnown,
         currConcurrencySupported = currConcurrencySupported,
         onSetBand = viewModel::onConnectBandChanged,
-        onSetHotspotTypeToCreate = viewModel::onSetHotspotTypeToCreate
+        onSetHotspotTypeToCreate = viewModel::onSetHotspotTypeToCreate,
+        onConnectWifiLauncherResult = { result ->
+            if(result.hotspotConfig != null) {
+                viewModel.onConnectWifi(result.hotspotConfig)
+            }else {
+                errorMessage = result.exception?.message
+            }
+        },
     )
+    // Show an error dialog when needed
+    errorMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = { errorMessage = null },
+            title = { Text("Connection Error") },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = { errorMessage = null }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
 }
 
 // Display the home screen
@@ -169,10 +190,21 @@ fun StartHomeScreen(
     currConcurrencyKnown: State<Boolean>,
     currConcurrencySupported: State<Boolean>,
     onSetBand: (ConnectBand) -> Unit = { },
-    onSetHotspotTypeToCreate: (HotspotType) -> Unit = { }
+    onSetHotspotTypeToCreate: (HotspotType) -> Unit = { },
+    onConnectWifiLauncherResult: (ConnectWifiLauncherResult) -> Unit,
 ){
     val di = localDI()
     val barcodeEncoder = remember { BarcodeEncoder() }
+    var connectLauncherState by remember {
+        mutableStateOf(ConnectWifiLauncherStatus.INACTIVE)
+    }
+    val connectLauncher = meshrabiyaConnectLauncher(
+        onStatusChange = {
+            connectLauncherState = it
+        },
+        node = node,
+        onResult = onConnectWifiLauncherResult,
+    )
     var userEnteredConnectUri by rememberSaveable { mutableStateOf("") }
     val showNoConcurrencyWarning by viewModel.showNoConcurrencyWarning.collectAsState()
     val showConcurrencyWarning by viewModel.showConcurrencyWarning.collectAsState()
@@ -188,7 +220,7 @@ fun StartHomeScreen(
             if (hotSpot != null) {
                 if(hotSpot.nodeVirtualAddr !in uiState.nodesOnMesh) {
                     // Connect device thru wifi connection
-                    viewModel.onConnectWifi(hotSpot)
+                    connectLauncher.launch(hotSpot)
                 }else{
                     Toast.makeText(context, "Already connected to this device", Toast.LENGTH_SHORT).show()
                     Log.d("Connection", "Already connected to this device")
@@ -307,7 +339,7 @@ fun StartHomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    WhiteButton(
+                    TransparentButton(
                         onClick = { onSetIncomingConnectionsEnabled(true) },
                         modifier = Modifier.padding(4.dp),
                         text = stringResource(id = R.string.start_hotspot),
@@ -327,7 +359,7 @@ fun StartHomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    WhiteButton(
+                    TransparentButton(
                         onClick = {
                             stopHotspotConfirmationDialog(context) { onConfirm ->
                                 if (onConfirm) {
@@ -382,7 +414,7 @@ fun StartHomeScreen(
                         Row (modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Center)
                         {
-                            WhiteButton(onClick = {
+                            TransparentButton(onClick = {
                                 qrScannerLauncher.launch(ScanOptions().setOrientationLocked(false)
                                     .setPrompt("Scan another device to join the Mesh")
                                     .setBeepEnabled(true)
@@ -409,7 +441,7 @@ fun StartHomeScreen(
                             label = { Text(stringResource(id = R.string.prompt_enter_uri)) }
                         )
                         Spacer(modifier = Modifier.height(4.dp))
-                        WhiteButton(
+                        TransparentButton(
                             onClick = {
                                 connect(userEnteredConnectUri)
                             },

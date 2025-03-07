@@ -3,19 +3,26 @@ package com.greybox.projectmesh.viewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import org.kodein.di.DI
-import com.greybox.projectmesh.model.NetworkScreenModel
 import com.greybox.projectmesh.server.AppServer
 import com.ustadmobile.meshrabiya.ext.addressToByteArray
 import com.ustadmobile.meshrabiya.vnet.AndroidVirtualNode
+import com.ustadmobile.meshrabiya.vnet.VirtualNode
 import com.ustadmobile.meshrabiya.vnet.wifi.state.WifiStationState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.kodein.di.DI
 import org.kodein.di.instance
 import java.net.InetAddress
+
+data class NetworkScreenModel(
+    val connectingInProgressSsid: String? = null,
+    val allNodes: Map<Int, VirtualNode.LastOriginatorMessage> = emptyMap(),
+)
 
 class NetworkScreenViewModel(di:DI, savedStateHandle: SavedStateHandle): ViewModel() {
     // _uiState will be updated whenever there is a change in the UI state
@@ -49,11 +56,10 @@ class NetworkScreenViewModel(di:DI, savedStateHandle: SavedStateHandle): ViewMod
         }
     }
 
-    fun getDeviceName(wifiAddress: Int){
+    fun getDeviceName(wifiAddress: Int) {
         viewModelScope.launch {
             val inetAddress = InetAddress.getByAddress(wifiAddress.addressToByteArray())
             appServer.sendDeviceName(inetAddress)
         }
     }
-
 }

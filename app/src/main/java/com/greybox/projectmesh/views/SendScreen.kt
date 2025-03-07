@@ -24,9 +24,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.greybox.projectmesh.GlobalApp
 import com.greybox.projectmesh.R
 import com.greybox.projectmesh.ViewModelFactory
-import com.greybox.projectmesh.buttonStyle.WhiteButton
-import com.greybox.projectmesh.model.SendScreenModel
-import com.greybox.projectmesh.viewModel.SelectDestNodeScreenViewModel
+import com.greybox.projectmesh.ui.theme.TransparentButton
+import com.greybox.projectmesh.viewModel.SendScreenModel
 import com.greybox.projectmesh.viewModel.SendScreenViewModel
 import org.kodein.di.compose.localDI
 
@@ -58,7 +57,7 @@ fun SendScreen(
             .padding(bottom = 72.dp)) {
             DisplayAllPendingTransfers(uiState)
         }
-        WhiteButton(onClick = { openDocumentLauncher.launch(arrayOf("*/*")) },
+        TransparentButton(onClick = { openDocumentLauncher.launch(arrayOf("*/*")) },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(16.dp),
@@ -128,4 +127,4 @@ fun autoConvertMS(ms: Int): String {
     } else {
         "${ms}ms"
     }
-    }
+}
