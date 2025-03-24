@@ -18,15 +18,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicText
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Wifi
@@ -257,88 +257,84 @@ fun StartHomeScreen(
         ConcurrencyWarningDialog(onDismiss = { viewModel.dismissConcurrencyWarning() })
     }
 
-    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-        Column {
-            Spacer(modifier = Modifier.height(6.dp))
-            // Display the device name and IP
+    // Function to check if Wi-Fi Direct is supported
+    fun isWifiDirectSupported(context: Context): Boolean {
+        return context.packageManager.hasSystemFeature(PackageManager.FEATURE_WIFI_DIRECT)
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item (key = "device_info") {
             LongPressCopyableText(
-                context = context,
-                text = "",
+                context,
+                text = stringResource(id = R.string.device_name) + ": ",
                 textCopyable = deviceName.toString(),
-                textSize = 15,
+                textSize = 14,
                 padding = 6
             )
-            Spacer(modifier = Modifier.height(6.dp))
             LongPressCopyableText(
-                context = context,
+                context,
                 text = stringResource(id = R.string.ip_address) + ": ",
                 textCopyable = uiState.localAddress.addressToDotNotation(),
-                textSize = 15,
+                textSize = 14,
                 padding = 6
             )
-            Spacer(modifier = Modifier.height(12.dp))
-            if(uiState.connectBandVisible) {
-                Column {
-                    Text(
-                        modifier = Modifier.padding(horizontal = 6.dp),
-                        text = stringResource(id = R.string.band),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Row(
-                        modifier = Modifier.padding(horizontal = 6.dp)
-                    ) {
-                        uiState.bandMenu.forEach { band ->
-                            FilterChip(
-                                selected = uiState.band == band,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-                                onClick = {
-                                    onSetBand(band)
-                                },
-                                label = {
-                                    Text(band.toString())
-                                },
-                            )
-                        }
+        }
+
+        item (key = "band_option"){
+            if (uiState.connectBandVisible) {
+                Text(
+                    modifier = Modifier.padding(horizontal = 6.dp),
+                    text = stringResource(id = R.string.band),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Row (modifier = Modifier.padding(horizontal = 6.dp)){
+                    uiState.bandMenu.forEach { band ->
+                        FilterChip(
+                            selected = uiState.band == band,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                            onClick = {
+                                onSetBand(band)
+                            },
+                            label = {
+                                Text(band.toString())
+                            },
+                        )
                     }
                 }
             }
+        }
 
-            // Function to check if Wi-Fi Direct is supported
-            fun isWifiDirectSupported(context: Context): Boolean {
-                return context.packageManager.hasSystemFeature(PackageManager.FEATURE_WIFI_DIRECT)
-            }
+        item (key = "hotspot_type_option") {
             if(!uiState.wifiConnectionEnabled) {
                 val wifiDirectSupported = isWifiDirectSupported(context)
-                Column {
-                    Text(
-                        modifier = Modifier.padding(horizontal = 6.dp),
-                        text = stringResource(id = R.string.hotspot_type),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Row(
-                        modifier = Modifier.padding(horizontal = 6.dp)
-                    ) {
-                        uiState.hotspotTypeMenu.forEach { hotspotType ->
-                            val isDisabled = (hotspotType == HotspotType.WIFIDIRECT_GROUP && !wifiDirectSupported)
-                            FilterChip(
-                                enabled = !isDisabled,
-                                selected = hotspotType == uiState.hotspotTypeToCreate,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-                                onClick = { onSetHotspotTypeToCreate(hotspotType) },
-                                label = { Text(hotspotType.toString()) }
-                            )
-                        }
+                Text(
+                    modifier = Modifier.padding(horizontal = 6.dp),
+                    text = stringResource(id = R.string.hotspot_type),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Row(modifier = Modifier.padding(horizontal = 6.dp)){
+                    uiState.hotspotTypeMenu.forEach { hotspotType ->
+                        val isDisabled = (hotspotType == HotspotType.WIFIDIRECT_GROUP && !wifiDirectSupported)
+                        FilterChip(
+                            enabled = !isDisabled,
+                            selected = hotspotType == uiState.hotspotTypeToCreate,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+                            onClick = { onSetHotspotTypeToCreate(hotspotType) },
+                            label = { Text(hotspotType.toString()) }
+                        )
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        item (key = "start_stop_hotspot_button"){
             // Display the "Start Hotspot" button
             val stationState = uiState.wifiState?.wifiStationState
             if (!uiState.wifiConnectionEnabled) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
+                Row{
                     TransparentButton(
                         onClick = { onSetIncomingConnectionsEnabled(true) },
                         modifier = Modifier.padding(4.dp),
@@ -355,10 +351,7 @@ fun StartHomeScreen(
             }
             // Display the "Stop Hotspot" button
             else{
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
+                Row{
                     TransparentButton(
                         onClick = {
                             stopHotspotConfirmationDialog(context) { onConfirm ->
@@ -373,11 +366,12 @@ fun StartHomeScreen(
                     )
                 }
             }
+        }
 
+        item(key = "qr_code_view"){
             // Generating QR CODE
             val connectUri = uiState.connectUri
             if (connectUri != null && uiState.wifiConnectionEnabled) {
-                Spacer(modifier = Modifier.height(16.dp))
                 QRCodeView(
                     connectUri,
                     barcodeEncoder,
@@ -395,67 +389,62 @@ fun StartHomeScreen(
                         putExtra(Intent.EXTRA_TEXT, connectUri)
                         type = "text/plain"
                     }
-
                     val shareIntent = Intent.createChooser(sendIntent, null)
                     context.startActivity(shareIntent)
                 }, modifier = Modifier.padding(4.dp), enabled = true) {
                     Text(stringResource(id = R.string.share_connect_uri))
                 }
             }
+        }
+
+        item(key = "connect_via_qr_code") {
+            val stationState = uiState.wifiState?.wifiStationState
             // Scan the QR CODE
             // If the stationState is not null and its status is INACTIVE,
             // It will display the option to connect via a QR code scan.
             if (stationState != null){
                 if (stationState.status == WifiStationState.Status.INACTIVE){
-                    Column (modifier = Modifier.fillMaxWidth()){
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(modifier = Modifier.padding(6.dp), text = stringResource(id = R.string.wifi_station_connection), style = TextStyle(fontSize = 16.sp))
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row (modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center)
-                        {
-                            TransparentButton(onClick = {
-                                qrScannerLauncher.launch(ScanOptions().setOrientationLocked(false)
-                                    .setPrompt("Scan another device to join the Mesh")
-                                    .setBeepEnabled(true)
-                                )},
-                                modifier = Modifier.padding(4.dp),
-                                text = stringResource(id = R.string.connect_via_qr_code_scan),
-                                // If the hotspot isn't started, enable the button
-                                // Else, check if the device supports WiFi STA/AP Concurrency
-                                // If it does, enable the button. Otherwise, disable it
-                                enabled = if(!uiState.hotspotStatus)
-                                    true
-                                else
-                                    currConcurrencySupported.value
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(modifier = Modifier.padding(6.dp), text = stringResource(id = R.string.instruction))
-                        Spacer(modifier = Modifier.height(4.dp))
-                        TextField(
-                            value = userEnteredConnectUri,
-                            onValueChange = {
-                                userEnteredConnectUri = it
-                            },
-                            label = { Text(stringResource(id = R.string.prompt_enter_uri)) }
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        TransparentButton(
-                            onClick = {
-                                connect(userEnteredConnectUri)
-                            },
+                    Text(modifier = Modifier.padding(6.dp), text = stringResource(id = R.string.wifi_station_connection), style = TextStyle(fontSize = 16.sp))
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row{
+                        TransparentButton(onClick = {
+                            qrScannerLauncher.launch(ScanOptions().setOrientationLocked(false)
+                                .setPrompt("Scan another device to join the Mesh")
+                                .setBeepEnabled(true)
+                            )},
                             modifier = Modifier.padding(4.dp),
-                            text = stringResource(id = R.string.connect_via_entering_connect_uri),
+                            text = stringResource(id = R.string.connect_via_qr_code_scan),
                             // If the hotspot isn't started, enable the button
                             // Else, check if the device supports WiFi STA/AP Concurrency
                             // If it does, enable the button. Otherwise, disable it
-                            enabled = if (!uiState.hotspotStatus)
+                            enabled = if(!uiState.hotspotStatus)
                                 true
                             else
                                 currConcurrencySupported.value
                         )
                     }
+                    Text(modifier = Modifier.padding(6.dp), text = stringResource(id = R.string.instruction))
+                    TextField(
+                        value = userEnteredConnectUri,
+                        onValueChange = {
+                            userEnteredConnectUri = it
+                        },
+                        label = { Text(stringResource(id = R.string.prompt_enter_uri)) }
+                    )
+                    TransparentButton(
+                        onClick = {
+                            connect(userEnteredConnectUri)
+                        },
+                        modifier = Modifier.padding(4.dp),
+                        text = stringResource(id = R.string.connect_via_entering_connect_uri),
+                        // If the hotspot isn't started, enable the button
+                        // Else, check if the device supports WiFi STA/AP Concurrency
+                        // If it does, enable the button. Otherwise, disable it
+                        enabled = if (!uiState.hotspotStatus)
+                            true
+                        else
+                            currConcurrencySupported.value
+                    )
                 }
                 // If the stationState is not INACTIVE, it displays a ListItem that represents
                 // the current connection status.
@@ -497,18 +486,18 @@ fun StartHomeScreen(
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            // add a Hotspot status indicator
+        }
+
+        // add a Hotspot status indicator
+        item(key = "hotspot_status_indicator"){
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(modifier = Modifier.padding(6.dp), text = stringResource(id = R.string.hotspot_status) + ": " +
+                Text(modifier = Modifier.padding(6.dp),
+                    text = stringResource(id = R.string.hotspot_status) + ": " +
                         if (uiState.hotspotStatus) stringResource(
-                            id = R.string.hotspot_status_online
-                        ) else stringResource(id = R.string.hotspot_status_offline))
-                Spacer(modifier = Modifier.width(8.dp)) // Adds some space between text and dot
+                            id = R.string.hotspot_status_online)
+                        else stringResource(id = R.string.hotspot_status_offline))
                 Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .background(
+                    modifier = Modifier.size(8.dp).background(
                             color = if (uiState.hotspotStatus) Color.Green else Color.Red,
                             shape = CircleShape
                         )

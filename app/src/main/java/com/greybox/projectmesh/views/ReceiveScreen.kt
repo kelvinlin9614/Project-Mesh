@@ -1,11 +1,14 @@
 package com.greybox.projectmesh.views
 
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
+import android.os.Build
 import android.os.Environment
 import android.provider.DocumentsContract
+import android.provider.MediaStore
 import android.util.Log
 import android.webkit.MimeTypeMap
 import android.widget.Toast
@@ -147,7 +150,7 @@ fun HandleIncomingTransfers(
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(
             items = uiState.incomingTransfers,
-            key = {Triple(it.fromHost, it.id, it.requestReceivedTime)}
+            key = {"${it.fromHost.hostAddress}-${it.id}-${it.requestReceivedTime}".hashCode()}
         ){ transfer ->
             ListItem(
                 modifier = Modifier
@@ -223,7 +226,54 @@ fun onDownload(context: Context, transfer: AppServer.IncomingTransferInfo, uriOr
     }
 }
 
+private fun saveFileToMediaStore(context: Context, transfer: AppServer.IncomingTransferInfo) {
+    // Skip for Android 9 and below
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+        return
+    }
+
+    val resolver = context.contentResolver
+    val subDirectory = "Project Mesh"
+    val fullPath = "${Environment.DIRECTORY_DOWNLOADS}/$subDirectory"
+    val contentValues = ContentValues().apply {
+        put(MediaStore.Downloads.DISPLAY_NAME, transfer.name)
+        put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
+        put(MediaStore.Downloads.RELATIVE_PATH, fullPath)
+    }
+
+    val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+    if (uri == null) {
+        Toast.makeText(context, "Failed to save file", Toast.LENGTH_LONG).show()
+        return
+    }
+
+    try {
+        resolver.openOutputStream(uri)?.use { outputStream ->
+            transfer.file?.inputStream()?.use { inputStream ->
+                inputStream.copyTo(outputStream)
+            }
+        }
+        Toast.makeText(context,
+            "File saved to: $fullPath",
+            Toast.LENGTH_LONG
+        ).show()
+    } catch (e: Exception) {
+        e.printStackTrace()
+        Toast.makeText(context,
+            "Error saving file: ${e.localizedMessage}",
+            Toast.LENGTH_LONG
+        ).show()
+    }
+}
+
+
 private fun saveFileToDefaultPath(context: Context, transfer: AppServer.IncomingTransferInfo, folderPath: String) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        // Android 10+ → Use MediaStore API
+        saveFileToMediaStore(context, transfer)
+        return
+    }
+    // Below implementation is for Android 9 and below
     val directoryFile = File(folderPath)
 
     // Ensure the directory exists

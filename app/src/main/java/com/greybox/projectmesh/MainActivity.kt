@@ -21,6 +21,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -51,17 +52,22 @@ import java.io.File
 import java.util.Locale
 import java.net.InetAddress
 import com.greybox.projectmesh.views.RequestPermissionsScreen
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity(), DIAware {
     override val di by closestDI()
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(R.style.Theme_ProjectMesh)
         super.onCreate(savedInstanceState)
         // crash screen
         CrashHandler.init(applicationContext,CrashScreenActivity::class.java)
         val settingPref: SharedPreferences by di.instance(tag="settings")
         val appServer: AppServer by di.instance()
-        // check if the default directory exist (Download/Project Mesh)
-        ensureDefaultDirectory()
+        // Run this task asynchronously (default directory creation)
+        lifecycleScope.launch(Dispatchers.IO) {
+            ensureDefaultDirectory()
+        }
         setContent {
             // Check if the app was launched from a notification
             val launchedFromNotification = intent?.getBooleanExtra("from_notification", false) ?: false

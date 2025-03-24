@@ -431,6 +431,12 @@ class AppServer(
         return outgoingTransfer
     }
 
+    fun removeOutgoingTransfer(transferId: Int) {
+        _outgoingTransfers.update { prev ->
+            prev.filter { it.id != transferId }
+        }
+    }
+
     /*
      Accept an incoming transfer
      */
@@ -600,6 +606,11 @@ class AppServer(
             // Update the _incomingTransfers list, removing the transfer that was just deleted
             _incomingTransfers.update { prev ->
                 prev.filter { it.id != incomingTransfer.id }
+            }
+
+            // Ensure Jetpack Compose recomposes UI before handling another delete
+            withContext(Dispatchers.Main) {
+                delay(150)
             }
         }
     }

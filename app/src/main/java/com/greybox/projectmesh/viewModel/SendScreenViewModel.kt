@@ -36,12 +36,17 @@ class SendScreenViewModel(
                         outgoingTransfers = it
                     )
                 }
-
             }
         }
     }
 
     fun onFileChosen(uris: List<Uri>){
         onSwitchToSelectDestNode(uris)
+    }
+
+    fun onDelete(transfer: AppServer.OutgoingTransferInfo){
+        viewModelScope.launch {
+            appServer.removeOutgoingTransfer(transfer.id)
+        }
     }
 }

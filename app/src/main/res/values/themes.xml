@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <style name="Theme.ProjectMesh" parent="android:Theme.Material.Light.NoActionBar" />
+<!--<resources>-->
+<!--    <style name="Theme.ProjectMesh" parent="android:Theme.Material.Light.NoActionBar" />-->
+<!--</resources>-->
+
+<resources xmlns:tools="http://schemas.android.com/tools">
+<style name="Theme.ProjectMesh" parent="android:Theme.Material.Light.NoActionBar">
+    <!-- Main app theme -->
+    <item name="android:windowBackground">@color/white</item>
+</style>
+
+<style name="Theme.ProjectMesh.Launcher">
+    <!-- Show the app icon before loading UI -->
+    <item name="android:windowBackground">@drawable/splash_screen</item>
+</style>
 </resources>

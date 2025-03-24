@@ -14,13 +14,20 @@ import com.ustadmobile.meshrabiya.ext.addressToDotNotation
 import com.ustadmobile.meshrabiya.ext.asInetAddress
 import com.ustadmobile.meshrabiya.vnet.AndroidVirtualNode
 import com.ustadmobile.meshrabiya.vnet.randomApipaAddr
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
+import okhttp3.internal.wait
 import org.kodein.di.DI
 import org.kodein.di.DIAware
 import org.kodein.di.bind
@@ -65,6 +72,9 @@ class GlobalApp : Application(), DIAware {
         }
     }
     private val diModule = DI.Module("project_mesh") {
+        // CoroutineScope for background initialization
+        val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
         // create a single instance of "InetAddress" for the entire lifetime of the application
         bind<InetAddress>(tag=TAG_VIRTUAL_ADDRESS) with singleton {
             // fetch an IP address from the data store or generate a random one
@@ -91,6 +101,7 @@ class GlobalApp : Application(), DIAware {
                 }
             }
         }
+
         bind <Json>() with singleton {
             Json {
                 encodeDefaults = true
@@ -127,21 +138,21 @@ class GlobalApp : Application(), DIAware {
             OkHttpClient.Builder()
                 .socketFactory(node.socketFactory)
                 // The maximum time to wait for a connection to be established
-                .connectTimeout(Duration.ofSeconds(30))
+                .connectTimeout(Duration.ofSeconds(20))
                 // The maximum time to wait for data to be read from the server
-                .readTimeout(Duration.ofSeconds(30))
+                .readTimeout(Duration.ofSeconds(20))
                 // The maximum time to wait for data to be written to the server
-                .writeTimeout(Duration.ofSeconds(30))
+                .writeTimeout(Duration.ofSeconds(20))
                 .build()
         }
 
         bind<MeshDatabase>() with singleton {
+            // Lazy initialization – the database will be built when first accessed.
             Room.databaseBuilder(applicationContext,
                 MeshDatabase::class.java,
                 "mesh-database"
             )
-                .fallbackToDestructiveMigration() // add this line to handle migrations destructively
-//                .allowMainThreadQueries() // this should generally be avoided for production apps
+                .fallbackToDestructiveMigration()
                 .build()
         }
 
@@ -160,17 +171,17 @@ class GlobalApp : Application(), DIAware {
                 receiveDir = instance(tag = TAG_RECEIVE_DIR),
                 json = instance(),
                 di = di,
-                db = instance()
+                db = instance() // This will use the lazy database instance.
             )
         }
 
         onReady {
-            // clears all data in the existing tables
-            GlobalScope.launch {
+            appScope.launch {
+                instance<AppServer>().start()
+                Log.d("GlobalApp", "AppServer started successfully on Port: ${AppServer.DEFAULT_PORT}")
                 instance<MeshDatabase>().messageDao().clearTable()
+                Log.d("GlobalApp", "Database cleanup complete")
             }
-            instance<AppServer>().start()
-            Log.d("AppServer", "Server started successfully on port: ${AppServer.DEFAULT_PORT}")
         }
     }
 
