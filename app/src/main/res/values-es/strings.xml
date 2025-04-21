@@ -46,4 +46,5 @@
     <string name="manual_test">Prueba Manual</string>
     <string name="reset">Restablecer</string>
 
+    <string name="log">Registro</string>
 </resources>

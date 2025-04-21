@@ -1,17 +1,21 @@
 package com.greybox.projectmesh
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Build
 import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.room.Room
 import com.greybox.projectmesh.db.MeshDatabase
+import com.greybox.projectmesh.extension.deviceInfo
 import com.greybox.projectmesh.extension.networkDataStore
 import com.greybox.projectmesh.server.AppServer
 import com.ustadmobile.meshrabiya.ext.addressToDotNotation
 import com.ustadmobile.meshrabiya.ext.asInetAddress
+import com.ustadmobile.meshrabiya.log.MNetLogger
 import com.ustadmobile.meshrabiya.vnet.AndroidVirtualNode
 import com.ustadmobile.meshrabiya.vnet.randomApipaAddr
 import kotlinx.coroutines.CoroutineScope
@@ -35,7 +39,9 @@ import org.kodein.di.instance
 import org.kodein.di.singleton
 import java.io.File
 import java.net.InetAddress
+import java.text.SimpleDateFormat
 import java.time.Duration
+import java.util.Date
 import java.util.concurrent.ConcurrentHashMap
 
 /*
@@ -71,6 +77,7 @@ class GlobalApp : Application(), DIAware {
             return inetAddress.hostAddress
         }
     }
+    @SuppressLint("SimpleDateFormat")
     private val diModule = DI.Module("project_mesh") {
         // CoroutineScope for background initialization
         val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -102,11 +109,26 @@ class GlobalApp : Application(), DIAware {
             }
         }
 
+        bind<MNetLogger>() with singleton {
+            val logFileNameDateComp = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
+            val logDir: File = instance(tag = TAG_LOG_DIR)
+            MNetLoggerAndroid(
+                deviceInfo = deviceInfo(),
+                minLogLevel = Log.DEBUG,
+                logFile = File(logDir, "${logFileNameDateComp}_${Build.MANUFACTURER}_${Build.MODEL}.log")
+            )
+        }
+
         bind <Json>() with singleton {
             Json {
                 encodeDefaults = true
             }
         }
+
+        bind<File>(tag = TAG_LOG_DIR) with singleton {
+            File(filesDir, "log")
+        }
+
         /*
         Ensuring a directory named "www" was created
         */
@@ -126,6 +148,7 @@ class GlobalApp : Application(), DIAware {
             // initialize the AndroidVirtualNode Constructor
             AndroidVirtualNode(
                 appContext = applicationContext,
+                logger = instance(),
                 json = instance(),
                 // inject the "InetAddress" instance
                 address = instance(tag = TAG_VIRTUAL_ADDRESS),
@@ -165,6 +188,7 @@ class GlobalApp : Application(), DIAware {
             AppServer(
                 appContext = applicationContext,
                 httpClient = instance(),
+                mLogger = instance(),
                 port = AppServer.DEFAULT_PORT,
                 name = node.addressAsInt.addressToDotNotation(),
                 localVirtualAddr = node.address,
@@ -177,10 +201,11 @@ class GlobalApp : Application(), DIAware {
 
         onReady {
             appScope.launch {
+                val logger: MNetLogger = instance()
                 instance<AppServer>().start()
-                Log.d("GlobalApp", "AppServer started successfully on Port: ${AppServer.DEFAULT_PORT}")
+                logger(Log.DEBUG,"AppServer started successfully on Port: ${AppServer.DEFAULT_PORT}")
                 instance<MeshDatabase>().messageDao().clearTable()
-                Log.d("GlobalApp", "Database cleanup complete")
+                logger(Log.DEBUG, "Database cleanup complete")
             }
         }
     }
@@ -194,5 +219,6 @@ class GlobalApp : Application(), DIAware {
         const val TAG_VIRTUAL_ADDRESS = "virtual_address"
         const val TAG_RECEIVE_DIR = "receive_dir"
         const val TAG_WWW_DIR = "www_dir"
+        const val TAG_LOG_DIR = "log_dir"
     }
 }

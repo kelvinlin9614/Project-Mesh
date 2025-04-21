@@ -9,6 +9,7 @@ import androidx.core.content.ContextCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.ustadmobile.meshrabiya.MeshrabiyaConstants
 
 /*
 context is a class that provides access to application-specific resources and classes.
@@ -49,4 +50,23 @@ val Context.networkDataStore: DataStore<Preferences> by preferencesDataStore(nam
 // Check if the device supports WiFi STA/AP Concurrency
 fun Context.hasStaApConcurrency(): Boolean {
     return Build.VERSION.SDK_INT >= 30 && getSystemService(WifiManager::class.java).isStaApConcurrencySupported
+}
+
+fun Context.deviceInfo(): String {
+    val wifiManager = getSystemService(WifiManager::class.java)
+    val hasStaConcurrency = Build.VERSION.SDK_INT >= 31 &&
+            wifiManager.isStaConcurrencyForLocalOnlyConnectionsSupported
+    val hasStaApConcurrency = Build.VERSION.SDK_INT >= 30 &&
+            wifiManager.isStaApConcurrencySupported
+    val hasWifiAwareSupport = packageManager.hasSystemFeature(PackageManager.FEATURE_WIFI_AWARE)
+
+    return buildString {
+        append("Meshrabiya: Version :${MeshrabiyaConstants.VERSION}\n")
+        append("Android Version: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})\n")
+        append("Device: ${Build.MANUFACTURER} - ${Build.MODEL}\n")
+        append("5Ghz supported: ${wifiManager.is5GHzBandSupported}\n")
+        append("Local-only station concurrency: $hasStaConcurrency\n")
+        append("Station-AP concurrency: $hasStaApConcurrency\n")
+        append("WifiAware support: $hasWifiAwareSupport\n")
+    }
 }

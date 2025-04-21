@@ -20,11 +20,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import com.greybox.projectmesh.extension.NEARBY_WIFI_PERMISSION_NAME
+import com.ustadmobile.meshrabiya.log.MNetLogger
 import com.ustadmobile.meshrabiya.vnet.AndroidVirtualNode
 import com.ustadmobile.meshrabiya.vnet.wifi.ConnectBand
 import com.ustadmobile.meshrabiya.vnet.wifi.HotspotType
 import com.ustadmobile.meshrabiya.vnet.wifi.WifiConnectException
 import java.util.regex.Pattern
+import android.util.Log
 
 
 // This File is to pre-check the wifi connection, reusing from Meshrabiya test app
@@ -60,6 +62,7 @@ enum class ConnectWifiLauncherStatus {
 @Composable
 fun meshrabiyaConnectLauncher(
     node: AndroidVirtualNode,
+    logger: MNetLogger? = null,
     onStatusChange: ((ConnectWifiLauncherStatus) -> Unit)?= null,
     onResult: (ConnectWifiLauncherResult) -> Unit,
 ): ConnectWifiLauncher {
@@ -75,7 +78,7 @@ fun meshrabiyaConnectLauncher(
         val deviceManager: CompanionDeviceManager =
             context.getSystemService(Context.COMPANION_DEVICE_SERVICE) as CompanionDeviceManager
         val associations = deviceManager.associations
-        // logger?.invoke(Log.INFO, "associations = ${associations.joinToString()}")
+        logger?.invoke(Log.INFO, "associations = ${associations.joinToString()}")
         val request = pendingAssociationRequest ?: return@rememberLauncherForActivityResult
         pendingAssociationRequest = null
 
@@ -85,7 +88,7 @@ fun meshrabiyaConnectLauncher(
                 CompanionDeviceManager.EXTRA_DEVICE
             )
 
-            //logger?.invoke(Log.INFO, "rememberConnectWifiLauncher: Got scan result: bssid = ${scanResult?.BSSID}")
+            logger?.invoke(Log.INFO, "rememberConnectWifiLauncher: Got scan result: bssid = ${scanResult?.BSSID}")
             node.storeBssid(request.connectConfig.ssid, scanResult?.BSSID)
 
             onResult(
@@ -112,7 +115,7 @@ fun meshrabiyaConnectLauncher(
         val connectRequestVal = pendingPermissionRequest ?: return@rememberLauncherForActivityResult
         pendingPermissionRequest = null
         if(granted) {
-            // logger?.invoke(Log.DEBUG, "ConnectWifiLauncher: permission granted")
+            logger?.invoke(Log.DEBUG, "ConnectWifiLauncher: permission granted")
             pendingAssociationRequest = connectRequestVal
         }else {
             onResult(
@@ -137,7 +140,7 @@ fun meshrabiyaConnectLauncher(
             context.getSystemService(Context.COMPANION_DEVICE_SERVICE) as CompanionDeviceManager
 
         if(knownBssid != null) {
-            // logger?.invoke(Log.DEBUG, "ConnectWifiLauncher: already associated with $ssid (bssid=$knownBssid)")
+            logger?.invoke(Log.DEBUG, "ConnectWifiLauncher: already associated with $ssid (bssid=$knownBssid)")
             onStatusChange?.invoke(ConnectWifiLauncherStatus.INACTIVE)
             onResult(
                 ConnectWifiLauncherResult(
@@ -148,9 +151,9 @@ fun meshrabiyaConnectLauncher(
                 )
             )
         }else {
-            // logger?.invoke(Log.DEBUG,
-                // "ConnectWifiLauncher: requesting association for $ssid"
-            // )
+            logger?.invoke(Log.DEBUG,
+                "ConnectWifiLauncher: requesting association for $ssid"
+            )
             onStatusChange?.invoke(ConnectWifiLauncherStatus.LOOKING_FOR_NETWORK)
             val deviceFilter = WifiDeviceFilter.Builder()
                 .setNamePattern(Pattern.compile(Pattern.quote(connectRequestVal.connectConfig.ssid)))
@@ -167,7 +170,7 @@ fun meshrabiyaConnectLauncher(
                 object: CompanionDeviceManager.Callback() {
                     @Deprecated("Deprecated in Java")
                     override fun onDeviceFound(intentSender: IntentSender) {
-                        // logger?.invoke(Log.DEBUG, "ConnectWifiLauncher: onDeviceFound for $ssid")
+                        logger?.invoke(Log.DEBUG, "ConnectWifiLauncher: onDeviceFound for $ssid")
                         onStatusChange?.invoke(ConnectWifiLauncherStatus.REQUESTING_LINK)
                         intentSenderLauncher.launch(
                             IntentSenderRequest.Builder(intentSender).build()
@@ -175,7 +178,7 @@ fun meshrabiyaConnectLauncher(
                     }
 
                     override fun onFailure(reason: CharSequence?) {
-                        // logger?.invoke(Log.DEBUG, "ConnectWifiLauncher: onFailure for $ssid - $reason")
+                        logger?.invoke(Log.DEBUG, "ConnectWifiLauncher: onFailure for $ssid - $reason")
                         onStatusChange?.invoke(ConnectWifiLauncherStatus.INACTIVE)
                         pendingAssociationRequest = null
                         onResult(

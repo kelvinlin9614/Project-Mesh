@@ -90,6 +90,7 @@ import com.ustadmobile.meshrabiya.vnet.wifi.HotspotType
 import com.greybox.projectmesh.components.ConnectWifiLauncherResult
 import com.greybox.projectmesh.components.ConnectWifiLauncherStatus
 import com.greybox.projectmesh.components.meshrabiyaConnectLauncher
+import com.ustadmobile.meshrabiya.log.MNetLogger
 
 @Composable
 // We customize the viewModel since we need to inject dependencies
@@ -107,6 +108,7 @@ fun HomeScreen(
     val di = localDI()
     val uiState: HomeScreenModel by viewModel.uiState.collectAsState(initial = HomeScreenModel())
     val node: VirtualNode by di.instance()
+    val logger: MNetLogger by di.instance()
     val currConcurrencyKnown = viewModel.concurrencyKnown.collectAsState()
     val currConcurrencySupported = viewModel.concurrencySupported.collectAsState()
 
@@ -161,6 +163,7 @@ fun HomeScreen(
                 errorMessage = result.exception?.message
             }
         },
+        logger = logger
     )
     // Show an error dialog when needed
     errorMessage?.let { message ->
@@ -192,6 +195,7 @@ fun StartHomeScreen(
     onSetBand: (ConnectBand) -> Unit = { },
     onSetHotspotTypeToCreate: (HotspotType) -> Unit = { },
     onConnectWifiLauncherResult: (ConnectWifiLauncherResult) -> Unit,
+    logger: MNetLogger
 ){
     val di = localDI()
     val barcodeEncoder = remember { BarcodeEncoder() }
@@ -199,18 +203,20 @@ fun StartHomeScreen(
         mutableStateOf(ConnectWifiLauncherStatus.INACTIVE)
     }
     val connectLauncher = meshrabiyaConnectLauncher(
+        node = node,
+        logger = logger,
         onStatusChange = {
             connectLauncherState = it
         },
-        node = node,
         onResult = onConnectWifiLauncherResult,
     )
     var userEnteredConnectUri by rememberSaveable { mutableStateOf("") }
     val showNoConcurrencyWarning by viewModel.showNoConcurrencyWarning.collectAsState()
     val showConcurrencyWarning by viewModel.showConcurrencyWarning.collectAsState()
     // connect to other device via connect uri
-    fun connect(uri: String): Unit {
+    fun connect(uri: String, logger: MNetLogger): Unit {
         try {
+            logger(Log.INFO, "HomeScreen: Scanned link: $uri")
             // Parse the link, get the wifi connect configuration.
             val hotSpot = MeshrabiyaConnectLink.parseUri(
                 uri = uri,
@@ -223,15 +229,15 @@ fun StartHomeScreen(
                     connectLauncher.launch(hotSpot)
                 }else{
                     Toast.makeText(context, "Already connected to this device", Toast.LENGTH_SHORT).show()
-                    Log.d("Connection", "Already connected to this device")
+                    logger(Log.INFO,"Already connected to this device")
                 }
             } else {
                 Toast.makeText(context, "Link doesn't have a connect config", Toast.LENGTH_SHORT).show()
-                Log.d("Connection", "Link doesn't have a connect config")
+                logger(Log.WARN, "HomeScreen: Link doesn't have a connect config")
             }
         } catch (e: Exception) {
             Toast.makeText(context, "Invalid Link", Toast.LENGTH_SHORT).show()
-            Log.e("Connection", "Invalid Link ${e.message}")
+            logger(Log.WARN, "HomeScreen: Invalid Link", e)
         }
     }
 
@@ -240,10 +246,10 @@ fun StartHomeScreen(
         // Get the contents of the QR code
         val link = result.contents
         if (link != null) {
-            connect(link)
+            connect(link, logger)
         }else{
             Toast.makeText(context, "QR Code scan doesn't return a link", Toast.LENGTH_SHORT).show()
-            Log.d("Connection", "QR Code scan doesn't return a link")
+            logger(Log.INFO,"QR Code scan doesn't return a link")
         }
     }
 
@@ -433,7 +439,7 @@ fun StartHomeScreen(
                     )
                     TransparentButton(
                         onClick = {
-                            connect(userEnteredConnectUri)
+                            connect(userEnteredConnectUri, logger)
                         },
                         modifier = Modifier.padding(4.dp),
                         text = stringResource(id = R.string.connect_via_entering_connect_uri),

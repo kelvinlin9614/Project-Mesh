@@ -3,6 +3,7 @@ package com.greybox.projectmesh.navigation
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -14,6 +15,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -23,6 +28,7 @@ import com.greybox.projectmesh.ui.theme.AppTheme
 import com.greybox.projectmesh.viewModel.SharedUriViewModel
 import com.greybox.projectmesh.views.ChatScreen
 import com.greybox.projectmesh.views.HomeScreen
+import com.greybox.projectmesh.views.LogScreen
 import com.greybox.projectmesh.views.NetworkScreen
 import com.greybox.projectmesh.views.PingScreen
 import com.greybox.projectmesh.views.ReceiveScreen
@@ -117,6 +123,9 @@ fun BottomNavApp(di: DI,
             composable(BottomNavItem.Receive.route) { ReceiveScreen(
                 onAutoFinishChange = onAutoFinishChange
             ) }
+            composable(BottomNavItem.Log.route) {
+                LogScreen()
+            }
             composable(BottomNavItem.Settings.route) {
                 SettingsScreen(
                     onThemeChange = onThemeChange,
@@ -138,6 +147,7 @@ fun BottomNavigationBar(navController: NavHostController) {
         NavigationItem(BottomNavItem.Network.route, stringResource(id = R.string.network), BottomNavItem.Network.icon),
         NavigationItem(BottomNavItem.Send.route, stringResource(id = R.string.send), BottomNavItem.Send.icon),
         NavigationItem(BottomNavItem.Receive.route, stringResource(id = R.string.receive), BottomNavItem.Receive.icon),
+        NavigationItem(BottomNavItem.Log.route, stringResource(id = R.string.log), BottomNavItem.Log.icon),
         NavigationItem(BottomNavItem.Settings.route, stringResource(id = R.string.settings), BottomNavItem.Settings.icon)
     )
     NavigationBar {
@@ -145,7 +155,15 @@ fun BottomNavigationBar(navController: NavHostController) {
         items.forEach { item ->
             NavigationBarItem(
                 icon = { Icon(item.icon, contentDescription = item.label) },
-                label = { Text(item.label) },
+                label = {
+                    Text(
+                        text = item.label,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
                 selected = currentRoute == item.route,
                 onClick = {
                     navController.navigate(item.route) {
