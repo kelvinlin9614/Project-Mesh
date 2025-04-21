@@ -108,7 +108,6 @@ class GlobalApp : Application(), DIAware {
                 }
             }
         }
-
         bind<MNetLogger>() with singleton {
             val logFileNameDateComp = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
             val logDir: File = instance(tag = TAG_LOG_DIR)
@@ -118,7 +117,6 @@ class GlobalApp : Application(), DIAware {
                 logFile = File(logDir, "${logFileNameDateComp}_${Build.MANUFACTURER}_${Build.MODEL}.log")
             )
         }
-
         bind <Json>() with singleton {
             Json {
                 encodeDefaults = true
